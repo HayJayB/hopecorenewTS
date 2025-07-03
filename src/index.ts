@@ -175,8 +175,9 @@ async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
     feedparser.on("end", resolve);
   });
 
-  // Type assertion here to fix typing issue with stream.pipeline and FeedParser instance
-  (response.body as unknown as NodeJS.ReadableStream).pipe(feedparser);
+  // Pipe response body stream into FeedParser and assert types:
+  (response.body as unknown as NodeJS.ReadableStream).pipe(feedparser as unknown as NodeJS.WritableStream);
+
   await done;
 
   return entries;
@@ -260,10 +261,8 @@ async function postToBluesky(
     embed,
   };
 
-  await client.app.bsky.feed.post.create({
-    repo: client.session!.did,
-    record,
-  });
+  // Use client.post() instead of client.app.bsky.feed.post.create()
+  await client.post(record);
 }
 
 async function main() {
