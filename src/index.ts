@@ -1,12 +1,12 @@
+import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
-import * as FeedParser from "feedparser";
-import fetch from "node-fetch";
-import { pipeline as pipelineCallback, Readable } from "stream";
+import Client from "@atproto/api";  // default import
+import FeedParser from "feedparser";
+import * as stream from "stream";
 import { promisify } from "util";
-import { AtpAgent } from "@atproto/api";
 
-const pipeline = promisify(pipelineCallback);
+const pipeline = promisify(stream.pipeline);
 
 const MAX_POSTED_LINKS = 50;
 const MAX_DAYS_OLD = 7;
@@ -20,10 +20,6 @@ const RECENT_KEYWORDS_FILE = path.resolve("./recent_keywords.txt");
 
 const BLUESKY_HANDLE = process.env.BLUESKY_HANDLE || "";
 const BLUESKY_APP_PASSWORD = process.env.BLUESKY_APP_PASSWORD || "";
-
-if (!BLUESKY_HANDLE || !BLUESKY_APP_PASSWORD) {
-  throw new Error("BLUESKY_HANDLE and BLUESKY_APP_PASSWORD must be set in environment variables.");
-}
 
 const FEEDS: string[] = [
   "https://jacobin.com/feed",
@@ -48,35 +44,102 @@ const FEEDS: string[] = [
 ];
 
 const POSITIVE_KEYWORDS: string[] = [
-  "win", "victory", "gains", "success", "growth", "solidarity", "organize", "strike",
-  "socialist", "left wing", "union", "responsibility", "mobilize", "charity",
-  "outreach", "resistance", "community", "truth", "celebrate", "local", "save",
-  "future", "knock", "knocks", "healing", "hope", "love", "progressive", "champion",
-  "leader", "ceasefire"
+  "win",
+  "victory",
+  "gains",
+  "success",
+  "growth",
+  "solidarity",
+  "organize",
+  "strike",
+  "socialist",
+  "left wing",
+  "union",
+  "responsibility",
+  "mobilize",
+  "charity",
+  "outreach",
+  "resistance",
+  "community",
+  "truth",
+  "celebrate",
+  "local",
+  "save",
+  "future",
+  "knock",
+  "knocks",
+  "healing",
+  "hope",
+  "love",
+  "progressive",
+  "champion",
+  "leader",
+  "ceasefire",
 ];
 
 const NEGATIVE_KEYWORDS: string[] = [
-  "death", "deadly", "killed", "kill", "killing", "violence", "attack", "crisis",
-  "disaster", "scandal", "accident", "injured", "tragedy", "fraud", "collapse",
-  "bomb", "shooting", "war", "loser", "awful", "horrible", "terrible", "tragic",
-  "destroy", "raiding", "raid", "gut", "fear", "broken", "destruction"
+  "death",
+  "deadly",
+  "killed",
+  "kill",
+  "killing",
+  "violence",
+  "attack",
+  "crisis",
+  "disaster",
+  "scandal",
+  "accident",
+  "injured",
+  "tragedy",
+  "fraud",
+  "collapse",
+  "bomb",
+  "shooting",
+  "war",
+  "loser",
+  "awful",
+  "horrible",
+  "terrible",
+  "tragic",
+  "destroy",
+  "raiding",
+  "raid",
+  "gut",
+  "fear",
+  "broken",
+  "destruction",
 ];
 
+// Minimal Feed Item type (since feedparser doesn't export one)
+interface FeedItem {
+  title?: string;
+  link?: string;
+  pubDate?: Date;
+  date?: Date;
+  image?: { url?: string };
+  enclosures?: Array<{ type?: string; url?: string }>;
+}
+
+// Helper to normalize titles (lowercase + remove punctuation)
 function normalizeTitle(title: string): string {
   return title.toLowerCase().replace(/[^\w\s]/g, "").trim();
 }
 
+// Calculate sentiment adjusted with negative penalties
 function adjustedSentiment(text: string): number {
   let baseScore = 0;
+  const lowerText = text.toLowerCase();
+
   for (const word of POSITIVE_KEYWORDS) {
-    if (text.toLowerCase().includes(word)) baseScore += 0.1;
+    if (lowerText.includes(word)) baseScore += 0.1;
   }
   for (const word of NEGATIVE_KEYWORDS) {
-    if (text.toLowerCase().includes(word)) baseScore -= NEGATIVE_PENALTY_PER_KEYWORD;
+    if (lowerText.includes(word)) baseScore -= NEGATIVE_PENALTY_PER_KEYWORD;
   }
   return baseScore;
 }
 
+// Load list from text file or empty
 async function loadListFromFile(filename: string): Promise<string[]> {
   try {
     const data = await fs.readFile(filename, "utf-8");
@@ -86,19 +149,12 @@ async function loadListFromFile(filename: string): Promise<string[]> {
   }
 }
 
+// Save list to text file
 async function saveListToFile(list: string[], filename: string): Promise<void> {
   await fs.writeFile(filename, list.join("\n"));
 }
 
-interface FeedItem {
-  title?: string;
-  link?: string;
-  pubDate?: Date;
-  date?: Date;
-  enclosures?: { url?: string; type?: string }[];
-  image?: { url?: string };
-}
-
+// Fetch and parse RSS feed entries
 async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
   const entries: FeedItem[] = [];
   const response = await fetch(url);
@@ -108,10 +164,10 @@ async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
 
   const feedparser = new FeedParser();
 
-  const feedDone = new Promise<void>((resolve, reject) => {
+  const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
-    feedparser.on("readable", function () {
-      let item;
+    feedparser.on("readable", function (this: FeedParser) {
+      let item: FeedItem | null;
       while ((item = this.read())) {
         entries.push(item);
       }
@@ -119,12 +175,15 @@ async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
     feedparser.on("end", resolve);
   });
 
-  await pipeline(Readable.from(response.body), feedparser);
-  await feedDone;
+  // Pipe response body stream into FeedParser and assert types:
+  (response.body as unknown as NodeJS.ReadableStream).pipe(feedparser as unknown as NodeJS.WritableStream);
+
+  await done;
 
   return entries;
 }
 
+// Extract first image URL from feed entry if available
 function extractImageUrl(entry: FeedItem): string | undefined {
   if (entry.image?.url) return entry.image.url;
   if (entry.enclosures) {
@@ -141,7 +200,7 @@ async function fetchRecentPositiveHeadlines(
   maxDays: number,
   recentKeywords: string[],
   postedTitlesNormalized: Set<string>
-) {
+): Promise<{ entry: FeedItem; keywords: string[] }[]> {
   const now = Date.now();
   const cutoff = now - maxDays * 24 * 60 * 60 * 1000;
   const allEntries: { entry: FeedItem; keywords: string[] }[] = [];
@@ -150,7 +209,7 @@ async function fetchRecentPositiveHeadlines(
     try {
       const entries = await fetchFeedEntries(feedUrl);
       for (const e of entries) {
-        const pubDate = e.pubDate ?? e.date;
+        const pubDate = e.pubDate ?? e.date ?? null;
         if (!pubDate) continue;
         if (pubDate.getTime() < cutoff) continue;
 
@@ -177,6 +236,10 @@ async function fetchRecentPositiveHeadlines(
   return allEntries;
 }
 
+import { AtpAgent } from '@atproto/api';
+
+const client = new AtpAgent({ service: 'https://bsky.social' });
+
 async function postToBluesky(
   text: string,
   link: string,
@@ -184,40 +247,26 @@ async function postToBluesky(
   description?: string,
   thumbnail?: string
 ) {
-  const client = new AtpAgent({ service: "https://bsky.social" });
-
-  const loginResponse = await client.login({
+  await client.login({
     identifier: BLUESKY_HANDLE,
     password: BLUESKY_APP_PASSWORD,
   });
-  console.log("Login success. Session info:", loginResponse);
 
-  const payload = {
-    repo: loginResponse.data.did,
-    collection: "app.bsky.feed.post",
+  await client.call('app.bsky.feed.post.create', {
+    repo: client.session?.did ?? '',
     record: {
       text,
-      createdAt: new Date().toISOString(),
       embed: {
-        $type: "app.bsky.embed.external",
+        $type: 'app.bsky.embed.external',
         external: {
           uri: link,
-          title: title ?? "Read more",
-          description: description ?? "",
+          title: title ?? 'Read more',
+          description: description ?? '',
           thumb: thumbnail ?? undefined,
         },
       },
     },
-  };
-
-  console.log("Posting payload:", JSON.stringify(payload, null, 2));
-
-  try {
-    const response = await client.api.com.atproto.repo.createRecord(payload);
-    console.log("Post created successfully:", response);
-  } catch (err) {
-    console.error("Error posting to Bluesky:", err);
-  }
+  });
 }
 
 async function main() {
@@ -235,17 +284,14 @@ async function main() {
     console.info("No recent positive articles found.");
     return;
   }
-  console.log(`Found ${candidates.length} candidate(s).`);
 
   const unposted = candidates.filter(({ entry }) => !postedLinks.includes(entry.link!));
   if (unposted.length === 0) {
     console.info("All recent articles already posted.");
     return;
   }
-  console.log(`Found ${unposted.length} unposted candidate(s).`);
 
   const { entry, keywords } = unposted[Math.floor(Math.random() * unposted.length)];
-  console.log("Selected entry:", entry);
 
   let text = entry.title ?? "Positive news";
   if (text.length > MAX_TEXT_LENGTH) text = text.slice(0, MAX_TEXT_LENGTH - 1);
