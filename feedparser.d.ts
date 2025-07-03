@@ -1,7 +1,8 @@
 declare module "feedparser" {
   import { EventEmitter } from "events";
+  import { Writable } from "stream";
 
-  interface FeedItem {
+  export interface FeedItem {
     title?: string;
     description?: string;
     summary?: string;
@@ -12,7 +13,7 @@ declare module "feedparser" {
     enclosures?: { url?: string; type?: string }[];
   }
 
-  class FeedParser extends EventEmitter {
+  class FeedParser extends EventEmitter implements Writable {
     constructor(options?: any);
     end(): void;
     write(chunk: any): void;
