@@ -8,5 +8,5 @@ declare module "feedparser" {
     // Add other members you need here
   }
 
-  export = FeedParser;
+  export default FeedParser;
 }
