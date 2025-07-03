@@ -2,7 +2,7 @@ import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { Client } from "atproto";
-import * as FeedParser from "feedparser";
+import FeedParser from "feedparser";
 import * as stream from "stream";
 import { promisify } from "util";
 
@@ -117,18 +117,18 @@ function normalizeTitle(title: string): string {
 
 // Calculate sentiment adjusted with negative penalties
 function adjustedSentiment(text: string): number {
-  // Simple sentiment polarity simulation (replace with real sentiment lib if you want)
   let baseScore = 0;
+  const lowerText = text.toLowerCase();
   for (const word of POSITIVE_KEYWORDS) {
-    if (text.toLowerCase().includes(word)) baseScore += 0.1;
+    if (lowerText.includes(word)) baseScore += 0.1;
   }
   for (const word of NEGATIVE_KEYWORDS) {
-    if (text.toLowerCase().includes(word)) baseScore -= NEGATIVE_PENALTY_PER_KEYWORD;
+    if (lowerText.includes(word)) baseScore -= NEGATIVE_PENALTY_PER_KEYWORD;
   }
   return baseScore;
 }
 
-// Load list from text file or empty
+// Load list from text file or return empty list if not found
 async function loadListFromFile(filename: string): Promise<string[]> {
   try {
     const data = await fs.readFile(filename, "utf-8");
@@ -188,7 +188,7 @@ async function fetchRecentPositiveHeadlines(
   maxDays: number,
   recentKeywords: string[],
   postedTitlesNormalized: Set<string>
-) {
+): Promise<{ entry: FeedParser.Item; keywords: string[] }[]> {
   const now = Date.now();
   const cutoff = now - maxDays * 24 * 60 * 60 * 1000;
   const allEntries: { entry: FeedParser.Item; keywords: string[] }[] = [];
@@ -201,7 +201,7 @@ async function fetchRecentPositiveHeadlines(
         if (!pubDate) continue;
         if (pubDate.getTime() < cutoff) continue;
 
-        const sentiment = adjustedSentiment(e.title || "");
+        const sentiment = adjustedSentiment(e.title ?? "");
         if (sentiment < POSITIVE_THRESHOLD) continue;
 
         const titleLower = (e.title ?? "").toLowerCase();
@@ -214,7 +214,7 @@ async function fetchRecentPositiveHeadlines(
         if (recentKeywords.some((rk) => keywordsInTitle.includes(rk))) continue;
 
         // Skip duplicates
-        if (postedTitlesNormalized.has(normalizeTitle(e.title || ""))) continue;
+        if (postedTitlesNormalized.has(normalizeTitle(e.title ?? ""))) continue;
 
         allEntries.push({ entry: e, keywords: keywordsInTitle });
       }
