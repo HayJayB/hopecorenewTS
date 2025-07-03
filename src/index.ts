@@ -1,10 +1,10 @@
 import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
+import Client from "@atproto/api";  // default import
 import FeedParser from "feedparser";
 import * as stream from "stream";
 import { promisify } from "util";
-import { AtpAgent, AppBskyFeedPost } from "@atproto/api";
 
 const pipeline = promisify(stream.pipeline);
 
@@ -44,21 +44,73 @@ const FEEDS: string[] = [
 ];
 
 const POSITIVE_KEYWORDS: string[] = [
-  "win", "victory", "gains", "success", "growth", "solidarity", "organize",
-  "strike", "socialist", "left wing", "union", "responsibility", "mobilize",
-  "charity", "outreach", "resistance", "community", "truth", "celebrate",
-  "local", "save", "future", "knock", "knocks", "healing", "hope", "love",
-  "progressive", "champion", "leader", "ceasefire"
+  "win",
+  "victory",
+  "gains",
+  "success",
+  "growth",
+  "solidarity",
+  "organize",
+  "strike",
+  "socialist",
+  "left wing",
+  "union",
+  "responsibility",
+  "mobilize",
+  "charity",
+  "outreach",
+  "resistance",
+  "community",
+  "truth",
+  "celebrate",
+  "local",
+  "save",
+  "future",
+  "knock",
+  "knocks",
+  "healing",
+  "hope",
+  "love",
+  "progressive",
+  "champion",
+  "leader",
+  "ceasefire",
 ];
 
 const NEGATIVE_KEYWORDS: string[] = [
-  "death", "deadly", "killed", "kill", "killing", "violence", "attack",
-  "crisis", "disaster", "scandal", "accident", "injured", "tragedy",
-  "fraud", "collapse", "bomb", "shooting", "war", "loser", "awful",
-  "horrible", "terrible", "tragic", "destroy", "raiding", "raid",
-  "gut", "fear", "broken", "destruction"
+  "death",
+  "deadly",
+  "killed",
+  "kill",
+  "killing",
+  "violence",
+  "attack",
+  "crisis",
+  "disaster",
+  "scandal",
+  "accident",
+  "injured",
+  "tragedy",
+  "fraud",
+  "collapse",
+  "bomb",
+  "shooting",
+  "war",
+  "loser",
+  "awful",
+  "horrible",
+  "terrible",
+  "tragic",
+  "destroy",
+  "raiding",
+  "raid",
+  "gut",
+  "fear",
+  "broken",
+  "destruction",
 ];
 
+// Minimal Feed Item type (since feedparser doesn't export one)
 interface FeedItem {
   title?: string;
   link?: string;
@@ -68,13 +120,16 @@ interface FeedItem {
   enclosures?: Array<{ type?: string; url?: string }>;
 }
 
+// Helper to normalize titles (lowercase + remove punctuation)
 function normalizeTitle(title: string): string {
   return title.toLowerCase().replace(/[^\w\s]/g, "").trim();
 }
 
+// Calculate sentiment adjusted with negative penalties
 function adjustedSentiment(text: string): number {
   let baseScore = 0;
   const lowerText = text.toLowerCase();
+
   for (const word of POSITIVE_KEYWORDS) {
     if (lowerText.includes(word)) baseScore += 0.1;
   }
@@ -84,6 +139,7 @@ function adjustedSentiment(text: string): number {
   return baseScore;
 }
 
+// Load list from text file or empty
 async function loadListFromFile(filename: string): Promise<string[]> {
   try {
     const data = await fs.readFile(filename, "utf-8");
@@ -93,18 +149,21 @@ async function loadListFromFile(filename: string): Promise<string[]> {
   }
 }
 
+// Save list to text file
 async function saveListToFile(list: string[], filename: string): Promise<void> {
   await fs.writeFile(filename, list.join("\n"));
 }
 
+// Fetch and parse RSS feed entries
 async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
   const entries: FeedItem[] = [];
-  console.log(`DEBUG: Fetching feed: ${url}`);
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+
   if (!response.body) throw new Error("No response body");
 
   const feedparser = new FeedParser();
+
   const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
     feedparser.on("readable", function (this: FeedParser) {
@@ -116,20 +175,22 @@ async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
     feedparser.on("end", resolve);
   });
 
-  (response.body as unknown as NodeJS.ReadableStream).pipe(
-    feedparser as unknown as NodeJS.WritableStream
-  );
+  // Pipe response body stream into FeedParser and assert types:
+  (response.body as unknown as NodeJS.ReadableStream).pipe(feedparser as unknown as NodeJS.WritableStream);
 
   await done;
-  console.log(`DEBUG: Parsed ${entries.length} entries from feed.`);
+
   return entries;
 }
 
+// Extract first image URL from feed entry if available
 function extractImageUrl(entry: FeedItem): string | undefined {
   if (entry.image?.url) return entry.image.url;
   if (entry.enclosures) {
     for (const enc of entry.enclosures) {
-      if (enc.type?.startsWith("image/")) return enc.url;
+      if (enc.type?.startsWith("image/")) {
+        return enc.url;
+      }
     }
   }
   return undefined;
@@ -139,7 +200,7 @@ async function fetchRecentPositiveHeadlines(
   maxDays: number,
   recentKeywords: string[],
   postedTitlesNormalized: Set<string>
-) {
+): Promise<{ entry: FeedItem; keywords: string[] }[]> {
   const now = Date.now();
   const cutoff = now - maxDays * 24 * 60 * 60 * 1000;
   const allEntries: { entry: FeedItem; keywords: string[] }[] = [];
@@ -148,28 +209,36 @@ async function fetchRecentPositiveHeadlines(
     try {
       const entries = await fetchFeedEntries(feedUrl);
       for (const e of entries) {
-        const pubDate = e.pubDate ?? e.date;
+        const pubDate = e.pubDate ?? e.date ?? null;
         if (!pubDate) continue;
         if (pubDate.getTime() < cutoff) continue;
+
         const sentiment = adjustedSentiment(e.title ?? "");
         if (sentiment < POSITIVE_THRESHOLD) continue;
+
         const titleLower = (e.title ?? "").toLowerCase();
-        const keywordsInTitle = POSITIVE_KEYWORDS.filter(k => titleLower.includes(k));
+        const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
+          titleLower.includes(k)
+        );
         if (keywordsInTitle.length === 0) continue;
-        if (recentKeywords.some(rk => keywordsInTitle.includes(rk))) continue;
+
+        if (recentKeywords.some((rk) => keywordsInTitle.includes(rk))) continue;
+
         if (postedTitlesNormalized.has(normalizeTitle(e.title ?? ""))) continue;
+
         allEntries.push({ entry: e, keywords: keywordsInTitle });
       }
     } catch (err) {
-      console.warn(`Failed to process feed ${feedUrl}: ${err}`);
+      console.warn(`Failed to fetch or parse feed ${feedUrl}: ${err}`);
     }
   }
 
-  console.log(`DEBUG: Found ${allEntries.length} positive recent entries.`);
   return allEntries;
 }
 
-const client = new AtpAgent({ service: "https://bsky.social" });
+import { AtpAgent } from '@atproto/api';
+
+const client = new AtpAgent({ service: 'https://bsky.social' });
 
 async function postToBluesky(
   text: string,
@@ -178,38 +247,33 @@ async function postToBluesky(
   description?: string,
   thumbnail?: string
 ) {
-  console.log("DEBUG: Logging in to Bluesky...");
   await client.login({
     identifier: BLUESKY_HANDLE,
     password: BLUESKY_APP_PASSWORD,
   });
-  console.log("DEBUG: Logged in as", client.session?.did);
 
-  const record = {
-    text,
-    embed: {
-      $type: "app.bsky.embed.external",
-      external: {
-        uri: link,
-        title: title ?? "Read more",
-        description: description ?? "",
-        thumb: thumbnail,
+  await client.call('app.bsky.feed.post.create', {
+    repo: client.session?.did ?? '',
+    record: {
+      text,
+      embed: {
+        $type: 'app.bsky.embed.external',
+        external: {
+          uri: link,
+          title: title ?? 'Read more',
+          description: description ?? '',
+          thumb: thumbnail ?? undefined,
+        },
       },
     },
-  };
-
-  console.log("DEBUG: Creating post:", JSON.stringify(record, null, 2));
-  await AppBskyFeedPost.create(client, client.session?.did ?? "", record);
-  console.log("DEBUG: Post created successfully.");
+  });
 }
 
 async function main() {
-  console.log("DEBUG: Loading state...");
   const postedLinks = await loadListFromFile(POSTED_LINKS_FILE);
   const recentKeywords = await loadListFromFile(RECENT_KEYWORDS_FILE);
   const postedTitlesNormalized = new Set(postedLinks.map(normalizeTitle));
 
-  console.log("DEBUG: Fetching candidates...");
   const candidates = await fetchRecentPositiveHeadlines(
     MAX_DAYS_OLD,
     recentKeywords,
@@ -233,7 +297,7 @@ async function main() {
   if (text.length > MAX_TEXT_LENGTH) text = text.slice(0, MAX_TEXT_LENGTH - 1);
 
   const imageUrl = extractImageUrl(entry);
-  console.log("DEBUG: Posting to Bluesky...");
+
   await postToBluesky(text, entry.link!, entry.title, "Positive news story", imageUrl);
 
   postedLinks.push(entry.link!);
