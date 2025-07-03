@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
-import * as FeedParser from "feedparser";
+import FeedParser = require("feedparser");
 import * as stream from "stream";
 import { promisify } from "util";
 import { BskyAgent } from "@atproto/api";
