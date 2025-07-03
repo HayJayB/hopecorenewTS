@@ -230,7 +230,7 @@ async function postToBluesky(
         uri: link,
         title: title ?? "Read more",
         description: description ?? "",
-        thumb: thumbnail,
+       thumb: thumbnail ?? undefined,
       },
     },
   });
