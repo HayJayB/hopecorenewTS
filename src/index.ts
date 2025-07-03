@@ -143,9 +143,9 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch ${url}`);
 
+  const NodeStream = stream.Readable.fromWeb(response.body as any);
+
   const feedparser = new FeedParser();
-  const streamBody = response.body;
-  if (!streamBody) throw new Error("No response body");
 
   const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
@@ -158,7 +158,7 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
     feedparser.on("end", resolve);
   });
 
-  await pipeline(streamBody, feedparser);
+  await pipeline(NodeStream, feedparser);
   await done;
 
   return entries;
