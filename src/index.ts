@@ -99,12 +99,12 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
 
   const entryPromise = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
-    feedparser.on("readable", function () {
-      let item;
-      while ((item = this.read())) entries.push(item);
-    });
-    feedparser.on("end", resolve);
-  });
+    feedparser.on("readable", function (this: FeedParser) {
+  let item: FeedParser.Item | null;
+  while ((item = this.read())) {
+    entries.push(item);
+  }
+});
 
   await pipeline(streamBody, feedparser);
   await entryPromise;
