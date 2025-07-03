@@ -311,8 +311,6 @@ async function main() {
   await saveListToFile(recentKeywords, RECENT_KEYWORDS_FILE);
 
   console.info(`Posted: ${entry.title}`);
-  console.log("Logged in as DID:", client.session?.did);
-  console.log("Post response:", response);
 }
 
 main().catch(console.error);
