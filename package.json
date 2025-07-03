@@ -1,0 +1,21 @@
+{
+  "name": "bluesky-positive-news-bot",
+  "version": "1.0.0",
+  "description": "A bot that posts positive news to Bluesky using Node.js and TypeScript.",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "atproto": "^1.2.5",
+    "feedparser": "^4.2.1",
+    "node-fetch": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "@types/feedparser": "^3.2.2",
+    "typescript": "^5.1.3"
+  },
+  "type": "module"
+}
