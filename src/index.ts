@@ -1,7 +1,7 @@
 import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { Client } from "@atproto/api"; // switched to @atproto/api as you requested
+import Client from "@atproto/api";  // default import
 import FeedParser from "feedparser";
 import * as stream from "stream";
 import { promisify } from "util";
@@ -110,6 +110,16 @@ const NEGATIVE_KEYWORDS: string[] = [
   "destruction",
 ];
 
+// Minimal Feed Item type (since feedparser doesn't export one)
+interface FeedItem {
+  title?: string;
+  link?: string;
+  pubDate?: Date;
+  date?: Date;
+  image?: { url?: string };
+  enclosures?: Array<{ type?: string; url?: string }>;
+}
+
 // Helper to normalize titles (lowercase + remove punctuation)
 function normalizeTitle(title: string): string {
   return title.toLowerCase().replace(/[^\w\s]/g, "").trim();
@@ -145,8 +155,8 @@ async function saveListToFile(list: string[], filename: string): Promise<void> {
 }
 
 // Fetch and parse RSS feed entries
-async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
-  const entries: FeedParser.Item[] = [];
+async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
+  const entries: FeedItem[] = [];
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch ${url}`);
 
@@ -157,7 +167,7 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
   const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
     feedparser.on("readable", function (this: FeedParser) {
-      let item: FeedParser.Item | null;
+      let item: FeedItem | null;
       while ((item = this.read())) {
         entries.push(item);
       }
@@ -165,15 +175,16 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
     feedparser.on("end", resolve);
   });
 
-  response.body.pipe(feedparser);
+  // Type assertion here to fix typing issue with stream.pipeline and FeedParser instance
+  (response.body as unknown as NodeJS.ReadableStream).pipe(feedparser);
   await done;
 
   return entries;
 }
 
 // Extract first image URL from feed entry if available
-function extractImageUrl(entry: FeedParser.Item): string | undefined {
-  if (entry.image && entry.image.url) return entry.image.url;
+function extractImageUrl(entry: FeedItem): string | undefined {
+  if (entry.image?.url) return entry.image.url;
   if (entry.enclosures) {
     for (const enc of entry.enclosures) {
       if (enc.type?.startsWith("image/")) {
@@ -188,10 +199,10 @@ async function fetchRecentPositiveHeadlines(
   maxDays: number,
   recentKeywords: string[],
   postedTitlesNormalized: Set<string>
-): Promise<{ entry: FeedParser.Item; keywords: string[] }[]> {
+): Promise<{ entry: FeedItem; keywords: string[] }[]> {
   const now = Date.now();
   const cutoff = now - maxDays * 24 * 60 * 60 * 1000;
-  const allEntries: { entry: FeedParser.Item; keywords: string[] }[] = [];
+  const allEntries: { entry: FeedItem; keywords: string[] }[] = [];
 
   for (const feedUrl of FEEDS) {
     try {
