@@ -138,8 +138,8 @@ async function saveListToFile(list: string[], filename: string): Promise<void> {
   await fs.writeFile(filename, list.join("\n"));
 }
 
-async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
-  const entries: FeedParser.Item[] = [];
+async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
+  const entries: FeedItem[] = [];
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch ${url}`);
 
@@ -150,7 +150,7 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
   const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
     feedparser.on("readable", function (this: FeedParser) {
-      let item: FeedParser.Item | null;
+      let item: FeedItem | null;
       while ((item = this.read())) {
         entries.push(item);
       }
@@ -164,7 +164,7 @@ async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
   return entries;
 }
 
-function extractImageUrl(entry: FeedParser.Item): string | null {
+function extractImageUrl(entry: FeedItem): string | null {
   if (entry.image?.url) return entry.image.url;
   if (entry.enclosures) {
     for (const enc of entry.enclosures) {
@@ -182,7 +182,7 @@ async function fetchRecentPositiveHeadlines(
   postedTitlesNormalized: Set<string>
 ) {
   const cutoff = Date.now() - maxDays * 86400 * 1000;
-  const all: { entry: FeedParser.Item; keywords: string[] }[] = [];
+  const all: { entry: FeedItem; keywords: string[] }[] = [];
 
   for (const feed of FEEDS) {
     try {
