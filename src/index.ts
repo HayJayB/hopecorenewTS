@@ -252,21 +252,20 @@ async function postToBluesky(
     password: BLUESKY_APP_PASSWORD,
   });
 
-  await client.call('app.bsky.feed.post.create', {
-    repo: client.session?.did ?? '',
-    record: {
-      text,
-      embed: {
-        $type: 'app.bsky.embed.external',
-        external: {
-          uri: link,
-          title: title ?? 'Read more',
-          description: description ?? '',
-          thumb: thumbnail ?? undefined,
-        },
+  const result = await client.post({
+    text,
+    embed: {
+      $type: 'app.bsky.embed.external',
+      external: {
+        uri: link,
+        title: title ?? 'Read more',
+        description: description ?? '',
+        thumb: thumbnail,
       },
     },
   });
+
+  console.log('Posted:', result.uri);
 }
 
 async function main() {
