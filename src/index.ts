@@ -1,20 +1,12 @@
-// src/index.ts
 import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
-import { createRequire } from "module";
+import { Client } from "@atproto/api"; // switched to @atproto/api as you requested
+import FeedParser from "feedparser";
 import * as stream from "stream";
 import { promisify } from "util";
-import { BskyAgent } from "@atproto/api";
-
-const require = createRequire(import.meta.url);
-const FeedParser = require("feedparser");
 
 const pipeline = promisify(stream.pipeline);
-
-import type { FeedItem } from "feedparser";
-
-// ... your constants (MAX_POSTED_LINKS, etc.) stay unchanged ...
 
 const MAX_POSTED_LINKS = 50;
 const MAX_DAYS_OLD = 7;
@@ -29,34 +21,115 @@ const RECENT_KEYWORDS_FILE = path.resolve("./recent_keywords.txt");
 const BLUESKY_HANDLE = process.env.BLUESKY_HANDLE || "";
 const BLUESKY_APP_PASSWORD = process.env.BLUESKY_APP_PASSWORD || "";
 
-const FEEDS = [
-  // ... your feeds here ...
+const FEEDS: string[] = [
+  "https://jacobin.com/feed",
+  "https://www.dsausa.org/feed/",
+  "https://www.thenation.com/feed/?post_type=article",
+  "https://inthesetimes.com/rss/articles",
+  "https://www.commondreams.org/rss-feed",
+  "https://truthout.org/feed/",
+  "https://progressive.org/feed/",
+  "https://theintercept.com/feed/",
+  "https://commonwealthclub.org/feed/podcast",
+  "https://www.theguardian.com/us-news/us-politics/rss",
+  "https://www.truthdig.com/feed/",
+  "https://www.counterpunch.org/feed/",
+  "https://www.democracynow.org/democracynow.rss",
+  "https://therealnews.com/feed/",
+  "https://labornotes.org/rss.xml",
+  "https://shadowproof.com/feed/",
+  "https://popularresistance.org/feed/",
+  "https://wagingnonviolence.org/feed/",
+  "https://www.leftvoice.org/feed/",
 ];
 
-const POSITIVE_KEYWORDS = [
-  // ... your positive keywords here ...
+const POSITIVE_KEYWORDS: string[] = [
+  "win",
+  "victory",
+  "gains",
+  "success",
+  "growth",
+  "solidarity",
+  "organize",
+  "strike",
+  "socialist",
+  "left wing",
+  "union",
+  "responsibility",
+  "mobilize",
+  "charity",
+  "outreach",
+  "resistance",
+  "community",
+  "truth",
+  "celebrate",
+  "local",
+  "save",
+  "future",
+  "knock",
+  "knocks",
+  "healing",
+  "hope",
+  "love",
+  "progressive",
+  "champion",
+  "leader",
+  "ceasefire",
 ];
 
-const NEGATIVE_KEYWORDS = [
-  // ... your negative keywords here ...
+const NEGATIVE_KEYWORDS: string[] = [
+  "death",
+  "deadly",
+  "killed",
+  "kill",
+  "killing",
+  "violence",
+  "attack",
+  "crisis",
+  "disaster",
+  "scandal",
+  "accident",
+  "injured",
+  "tragedy",
+  "fraud",
+  "collapse",
+  "bomb",
+  "shooting",
+  "war",
+  "loser",
+  "awful",
+  "horrible",
+  "terrible",
+  "tragic",
+  "destroy",
+  "raiding",
+  "raid",
+  "gut",
+  "fear",
+  "broken",
+  "destruction",
 ];
 
-// normalizeTitle etc. helpers stay unchanged
+// Helper to normalize titles (lowercase + remove punctuation)
 function normalizeTitle(title: string): string {
   return title.toLowerCase().replace(/[^\w\s]/g, "").trim();
 }
 
+// Calculate sentiment adjusted with negative penalties
 function adjustedSentiment(text: string): number {
   let baseScore = 0;
+  const lowerText = text.toLowerCase();
+
   for (const word of POSITIVE_KEYWORDS) {
-    if (text.toLowerCase().includes(word)) baseScore += 0.1;
+    if (lowerText.includes(word)) baseScore += 0.1;
   }
   for (const word of NEGATIVE_KEYWORDS) {
-    if (text.toLowerCase().includes(word)) baseScore -= NEGATIVE_PENALTY_PER_KEYWORD;
+    if (lowerText.includes(word)) baseScore -= NEGATIVE_PENALTY_PER_KEYWORD;
   }
   return baseScore;
 }
 
+// Load list from text file or empty
 async function loadListFromFile(filename: string): Promise<string[]> {
   try {
     const data = await fs.readFile(filename, "utf-8");
@@ -66,22 +139,25 @@ async function loadListFromFile(filename: string): Promise<string[]> {
   }
 }
 
+// Save list to text file
 async function saveListToFile(list: string[], filename: string): Promise<void> {
   await fs.writeFile(filename, list.join("\n"));
 }
 
-// 🟢 Simplify fetchFeedEntries
-async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
-  const entries: FeedItem[] = [];
+// Fetch and parse RSS feed entries
+async function fetchFeedEntries(url: string): Promise<FeedParser.Item[]> {
+  const entries: FeedParser.Item[] = [];
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch ${url}`);
+
+  if (!response.body) throw new Error("No response body");
 
   const feedparser = new FeedParser();
 
   const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
-    feedparser.on("readable", function () {
-      let item: FeedItem | null;
+    feedparser.on("readable", function (this: FeedParser) {
+      let item: FeedParser.Item | null;
       while ((item = this.read())) {
         entries.push(item);
       }
@@ -89,18 +165,20 @@ async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
     feedparser.on("end", resolve);
   });
 
-  // Use simple pipe instead of pipeline
   response.body.pipe(feedparser);
   await done;
 
   return entries;
 }
 
-function extractImageUrl(entry: FeedItem): string | undefined {
+// Extract first image URL from feed entry if available
+function extractImageUrl(entry: FeedParser.Item): string | undefined {
   if (entry.image && entry.image.url) return entry.image.url;
   if (entry.enclosures) {
     for (const enc of entry.enclosures) {
-      if (enc.type?.startsWith("image/")) return enc.url;
+      if (enc.type?.startsWith("image/")) {
+        return enc.url;
+      }
     }
   }
   return undefined;
@@ -110,10 +188,10 @@ async function fetchRecentPositiveHeadlines(
   maxDays: number,
   recentKeywords: string[],
   postedTitlesNormalized: Set<string>
-) {
+): Promise<{ entry: FeedParser.Item; keywords: string[] }[]> {
   const now = Date.now();
   const cutoff = now - maxDays * 24 * 60 * 60 * 1000;
-  const allEntries: { entry: FeedItem; keywords: string[] }[] = [];
+  const allEntries: { entry: FeedParser.Item; keywords: string[] }[] = [];
 
   for (const feedUrl of FEEDS) {
     try {
@@ -123,7 +201,7 @@ async function fetchRecentPositiveHeadlines(
         if (!pubDate) continue;
         if (pubDate.getTime() < cutoff) continue;
 
-        const sentiment = adjustedSentiment(e.title || "");
+        const sentiment = adjustedSentiment(e.title ?? "");
         if (sentiment < POSITIVE_THRESHOLD) continue;
 
         const titleLower = (e.title ?? "").toLowerCase();
@@ -131,8 +209,10 @@ async function fetchRecentPositiveHeadlines(
           titleLower.includes(k)
         );
         if (keywordsInTitle.length === 0) continue;
+
         if (recentKeywords.some((rk) => keywordsInTitle.includes(rk))) continue;
-        if (postedTitlesNormalized.has(normalizeTitle(e.title || ""))) continue;
+
+        if (postedTitlesNormalized.has(normalizeTitle(e.title ?? ""))) continue;
 
         allEntries.push({ entry: e, keywords: keywordsInTitle });
       }
@@ -151,20 +231,27 @@ async function postToBluesky(
   description?: string,
   thumbnail?: string
 ) {
-  const agent = new BskyAgent({ service: "https://bsky.social" });
-  await agent.login({ identifier: BLUESKY_HANDLE, password: BLUESKY_APP_PASSWORD });
+  const client = new Client({ service: "https://bsky.social" });
+  await client.login({ identifier: BLUESKY_HANDLE, password: BLUESKY_APP_PASSWORD });
 
-  await agent.post({
-    text,
-    embed: {
-      $type: "app.bsky.embed.external",
-      external: {
-        uri: link,
-        title: title ?? "Read more",
-        description: description ?? "",
-        thumb: thumbnail,
-      },
+  const embed = {
+    $type: "app.bsky.embed.external",
+    external: {
+      uri: link,
+      title: title ?? "Read more",
+      description: description ?? "",
+      thumb: thumbnail,
     },
+  };
+
+  const record = {
+    text,
+    embed,
+  };
+
+  await client.app.bsky.feed.post.create({
+    repo: client.session!.did,
+    record,
   });
 }
 
@@ -184,7 +271,7 @@ async function main() {
     return;
   }
 
-  const unposted = candidates.filter(({ entry }) => !postedLinks.includes(entry.link ?? ""));
+  const unposted = candidates.filter(({ entry }) => !postedLinks.includes(entry.link!));
   if (unposted.length === 0) {
     console.info("All recent articles already posted.");
     return;
@@ -197,9 +284,9 @@ async function main() {
 
   const imageUrl = extractImageUrl(entry);
 
-  await postToBluesky(text, entry.link ?? "", entry.title, "Positive news story", imageUrl);
+  await postToBluesky(text, entry.link!, entry.title, "Positive news story", imageUrl);
 
-  postedLinks.push(entry.link ?? "");
+  postedLinks.push(entry.link!);
   if (postedLinks.length > MAX_POSTED_LINKS)
     postedLinks.splice(0, postedLinks.length - MAX_POSTED_LINKS);
   await saveListToFile(postedLinks, POSTED_LINKS_FILE);
