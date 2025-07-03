@@ -1,12 +1,20 @@
+// src/index.ts
 import fetch from "node-fetch";
 import * as fs from "fs/promises";
 import * as path from "path";
-import FeedParser = require("feedparser");
+import { createRequire } from "module";
 import * as stream from "stream";
 import { promisify } from "util";
 import { BskyAgent } from "@atproto/api";
 
+const require = createRequire(import.meta.url);
+const FeedParser = require("feedparser");
+
 const pipeline = promisify(stream.pipeline);
+
+import type { FeedItem } from "feedparser";
+
+// ... your constants (MAX_POSTED_LINKS, etc.) stay unchanged ...
 
 const MAX_POSTED_LINKS = 50;
 const MAX_DAYS_OLD = 7;
@@ -22,94 +30,18 @@ const BLUESKY_HANDLE = process.env.BLUESKY_HANDLE || "";
 const BLUESKY_APP_PASSWORD = process.env.BLUESKY_APP_PASSWORD || "";
 
 const FEEDS = [
-  "https://jacobin.com/feed",
-  "https://www.dsausa.org/feed/",
-  "https://www.thenation.com/feed/?post_type=article",
-  "https://inthesetimes.com/rss/articles",
-  "https://www.commondreams.org/rss-feed",
-  "https://truthout.org/feed/",
-  "https://progressive.org/feed/",
-  "https://theintercept.com/feed/",
-  "https://commonwealthclub.org/feed/podcast",
-  "https://www.theguardian.com/us-news/us-politics/rss",
-  "https://www.truthdig.com/feed/",
-  "https://www.counterpunch.org/feed/",
-  "https://www.democracynow.org/democracynow.rss",
-  "https://therealnews.com/feed/",
-  "https://labornotes.org/rss.xml",
-  "https://shadowproof.com/feed/",
-  "https://popularresistance.org/feed/",
-  "https://wagingnonviolence.org/feed/",
-  "https://www.leftvoice.org/feed/",
+  // ... your feeds here ...
 ];
 
 const POSITIVE_KEYWORDS = [
-  "win",
-  "victory",
-  "gains",
-  "success",
-  "growth",
-  "solidarity",
-  "organize",
-  "strike",
-  "socialist",
-  "left wing",
-  "union",
-  "responsibility",
-  "mobilize",
-  "charity",
-  "outreach",
-  "resistance",
-  "community",
-  "truth",
-  "celebrate",
-  "local",
-  "save",
-  "future",
-  "knock",
-  "knocks",
-  "healing",
-  "hope",
-  "love",
-  "progressive",
-  "champion",
-  "leader",
-  "ceasefire",
+  // ... your positive keywords here ...
 ];
 
 const NEGATIVE_KEYWORDS = [
-  "death",
-  "deadly",
-  "killed",
-  "kill",
-  "killing",
-  "violence",
-  "attack",
-  "crisis",
-  "disaster",
-  "scandal",
-  "accident",
-  "injured",
-  "tragedy",
-  "fraud",
-  "collapse",
-  "bomb",
-  "shooting",
-  "war",
-  "loser",
-  "awful",
-  "horrible",
-  "terrible",
-  "tragic",
-  "destroy",
-  "raiding",
-  "raid",
-  "gut",
-  "fear",
-  "broken",
-  "destruction",
+  // ... your negative keywords here ...
 ];
 
+// normalizeTitle etc. helpers stay unchanged
 function normalizeTitle(title: string): string {
   return title.toLowerCase().replace(/[^\w\s]/g, "").trim();
 }
@@ -138,18 +70,17 @@ async function saveListToFile(list: string[], filename: string): Promise<void> {
   await fs.writeFile(filename, list.join("\n"));
 }
 
+// 🟢 Simplify fetchFeedEntries
 async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
   const entries: FeedItem[] = [];
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch ${url}`);
 
-  const NodeStream = stream.Readable.fromWeb(response.body as any);
-
   const feedparser = new FeedParser();
 
   const done = new Promise<void>((resolve, reject) => {
     feedparser.on("error", reject);
-    feedparser.on("readable", function (this: FeedParser) {
+    feedparser.on("readable", function () {
       let item: FeedItem | null;
       while ((item = this.read())) {
         entries.push(item);
@@ -158,22 +89,21 @@ async function fetchFeedEntries(url: string): Promise<FeedItem[]> {
     feedparser.on("end", resolve);
   });
 
-  await pipeline(NodeStream, feedparser);
+  // Use simple pipe instead of pipeline
+  response.body.pipe(feedparser);
   await done;
 
   return entries;
 }
 
-function extractImageUrl(entry: FeedItem): string | null {
-  if (entry.image?.url) return entry.image.url;
+function extractImageUrl(entry: FeedItem): string | undefined {
+  if (entry.image && entry.image.url) return entry.image.url;
   if (entry.enclosures) {
     for (const enc of entry.enclosures) {
-      if (enc.type?.startsWith("image/")) {
-        return enc.url ?? null;
-      }
+      if (enc.type?.startsWith("image/")) return enc.url;
     }
   }
-  return null;
+  return undefined;
 }
 
 async function fetchRecentPositiveHeadlines(
@@ -181,17 +111,19 @@ async function fetchRecentPositiveHeadlines(
   recentKeywords: string[],
   postedTitlesNormalized: Set<string>
 ) {
-  const cutoff = Date.now() - maxDays * 86400 * 1000;
-  const all: { entry: FeedItem; keywords: string[] }[] = [];
+  const now = Date.now();
+  const cutoff = now - maxDays * 24 * 60 * 60 * 1000;
+  const allEntries: { entry: FeedItem; keywords: string[] }[] = [];
 
-  for (const feed of FEEDS) {
+  for (const feedUrl of FEEDS) {
     try {
-      const entries = await fetchFeedEntries(feed);
+      const entries = await fetchFeedEntries(feedUrl);
       for (const e of entries) {
-        const pubDate = e.pubDate ?? e.date;
-        if (!pubDate || pubDate.getTime() < cutoff) continue;
+        const pubDate = e.pubDate ?? e.date ?? null;
+        if (!pubDate) continue;
+        if (pubDate.getTime() < cutoff) continue;
 
-        const sentiment = adjustedSentiment(e.title ?? "");
+        const sentiment = adjustedSentiment(e.title || "");
         if (sentiment < POSITIVE_THRESHOLD) continue;
 
         const titleLower = (e.title ?? "").toLowerCase();
@@ -200,16 +132,16 @@ async function fetchRecentPositiveHeadlines(
         );
         if (keywordsInTitle.length === 0) continue;
         if (recentKeywords.some((rk) => keywordsInTitle.includes(rk))) continue;
-        if (postedTitlesNormalized.has(normalizeTitle(e.title ?? ""))) continue;
+        if (postedTitlesNormalized.has(normalizeTitle(e.title || ""))) continue;
 
-        all.push({ entry: e, keywords: keywordsInTitle });
+        allEntries.push({ entry: e, keywords: keywordsInTitle });
       }
     } catch (err) {
-      console.warn(`Failed to process feed ${feed}: ${err}`);
+      console.warn(`Failed to fetch or parse feed ${feedUrl}: ${err}`);
     }
   }
 
-  return all;
+  return allEntries;
 }
 
 async function postToBluesky(
@@ -230,7 +162,7 @@ async function postToBluesky(
         uri: link,
         title: title ?? "Read more",
         description: description ?? "",
-       thumb: thumbnail ?? undefined,
+        thumb: thumbnail,
       },
     },
   });
@@ -252,9 +184,9 @@ async function main() {
     return;
   }
 
-  const unposted = candidates.filter(({ entry }) => !postedLinks.includes(entry.link!));
+  const unposted = candidates.filter(({ entry }) => !postedLinks.includes(entry.link ?? ""));
   if (unposted.length === 0) {
-    console.info("All articles already posted.");
+    console.info("All recent articles already posted.");
     return;
   }
 
@@ -264,9 +196,10 @@ async function main() {
   if (text.length > MAX_TEXT_LENGTH) text = text.slice(0, MAX_TEXT_LENGTH - 1);
 
   const imageUrl = extractImageUrl(entry);
-  await postToBluesky(text, entry.link!, entry.title, "Positive news story", imageUrl);
 
-  postedLinks.push(entry.link!);
+  await postToBluesky(text, entry.link ?? "", entry.title, "Positive news story", imageUrl);
+
+  postedLinks.push(entry.link ?? "");
   if (postedLinks.length > MAX_POSTED_LINKS)
     postedLinks.splice(0, postedLinks.length - MAX_POSTED_LINKS);
   await saveListToFile(postedLinks, POSTED_LINKS_FILE);
