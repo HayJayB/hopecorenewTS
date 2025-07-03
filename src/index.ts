@@ -236,6 +236,10 @@ async function fetchRecentPositiveHeadlines(
   return allEntries;
 }
 
+import { AtpAgent } from '@atproto/api';
+
+const client = new AtpAgent({ service: 'https://bsky.social' });
+
 async function postToBluesky(
   text: string,
   link: string,
@@ -243,26 +247,25 @@ async function postToBluesky(
   description?: string,
   thumbnail?: string
 ) {
-  const client = new Client({ service: "https://bsky.social" });
-  await client.login({ identifier: BLUESKY_HANDLE, password: BLUESKY_APP_PASSWORD });
+  await client.login({
+    identifier: BLUESKY_HANDLE,
+    password: BLUESKY_APP_PASSWORD,
+  });
 
   const embed = {
-    $type: "app.bsky.embed.external",
-    external: {
-      uri: link,
-      title: title ?? "Read more",
-      description: description ?? "",
-      thumb: thumbnail,
-    },
+    uri: link,
+    title: title ?? 'Read more',
+    description: description ?? '',
+    thumb: thumbnail ?? undefined,
   };
 
-  const record = {
+  await client.post({
     text,
-    embed,
-  };
-
-  // Use client.post() instead of client.app.bsky.feed.post.create()
-  await client.post(record);
+    embed: {
+      $type: 'app.bsky.embed.external',
+      external: embed,
+    },
+  });
 }
 
 async function main() {
