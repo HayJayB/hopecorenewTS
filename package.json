@@ -8,7 +8,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "atproto": "^1.2.4",
+    "atproto": "^0.0.1",
     "feedparser": "^4.2.1",
     "node-fetch": "^3.3.1"
   },
