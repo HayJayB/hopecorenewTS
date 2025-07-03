@@ -240,19 +240,44 @@ import { AtpAgent } from '@atproto/api';
 
 const client = new AtpAgent({ service: 'https://bsky.social' });
 
+// New helper function to upload image from URL and get blobRef
+async function uploadImageToBluesky(url: string): Promise<string | undefined> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`Failed to download image: ${url}`);
+      return undefined;
+    }
+    const buffer = await response.arrayBuffer();
+    const uint8array = new Uint8Array(buffer);
+
+    // Upload the image blob to Bluesky
+    const uploadRes = await client.uploadBlob(uint8array);
+    return uploadRes.blob;
+  } catch (err) {
+    console.warn(`Error uploading image blob: ${err}`);
+    return undefined;
+  }
+}
+
 async function postToBluesky(
   text: string,
   link: string,
   title?: string,
   description?: string,
-  thumbnail?: string
+  thumbnailUrl?: string
 ) {
   await client.login({
     identifier: BLUESKY_HANDLE,
     password: BLUESKY_APP_PASSWORD,
   });
 
-  const result = await client.post({
+  let thumbBlobRef: string | undefined = undefined;
+  if (thumbnailUrl) {
+    thumbBlobRef = await uploadImageToBluesky(thumbnailUrl);
+  }
+
+  const record: any = {
     text,
     embed: {
       $type: 'app.bsky.embed.external',
@@ -260,12 +285,15 @@ async function postToBluesky(
         uri: link,
         title: title ?? 'Read more',
         description: description ?? '',
-        thumb: thumbnail,
+        ...(thumbBlobRef ? { thumb: thumbBlobRef } : {}),
       },
     },
-  });
+  };
 
-  console.log('Posted:', result.uri);
+  await client.call('app.bsky.feed.post.create', {
+    repo: client.session?.did ?? '',
+    record,
+  });
 }
 
 async function main() {
