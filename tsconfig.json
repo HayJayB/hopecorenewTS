@@ -1,14 +1,12 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "Node",
+    "module": "commonjs",
     "outDir": "dist",
     "strict": true,
-    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "skipLibCheck": true
   },
-  "include": ["src", "feedparser.d.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
 }
