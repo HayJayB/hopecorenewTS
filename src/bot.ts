@@ -1,3 +1,5 @@
+// src/bot.ts
+
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -8,6 +10,8 @@ import {
   normalizeTitle,
   adjustedSentiment,
 } from "./utils";
+
+import { AtpAgent } from "@atproto/api";
 
 const parser = new Parser();
 
@@ -166,8 +170,23 @@ async function postToBluesky(title: string, url: string): Promise<void> {
     );
   }
 
-  // TODO: Replace this stub with real Bluesky API integration using atproto or axios
-  console.log(`Posting to Bluesky: ${title} - ${url}`);
+  const agent = new AtpAgent({ service: "https://bsky.social" });
+
+  try {
+    // Authenticate
+    await agent.login({ identifier: handle, password: appPassword });
+
+    // Compose post content
+    const content = `${title}\n\n${url}`;
+
+    // Post to Bluesky
+    await agent.post({ text: content });
+
+    console.log("Posted to Bluesky successfully:", title);
+  } catch (err) {
+    console.error("Error posting to Bluesky:", err);
+    throw err;
+  }
 }
 
 async function main() {
