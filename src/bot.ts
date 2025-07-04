@@ -8,7 +8,6 @@ import {
   normalizeTitle,
   adjustedSentiment,
 } from "./utils";
-
 import { AtpAgent } from "@atproto/api";
 
 const parser = new Parser();
@@ -133,7 +132,6 @@ async function fetchRecentPositiveHeadlines(): Promise<
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-  // Filter and score entries
   const filtered = allEntries.filter((entry) => {
     if (!entry.title || !entry.link || !entry.pubDate) return false;
 
@@ -159,29 +157,30 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-import { AtpAgent, AppBskyClient } from "@atproto/api";
+async function postToBluesky(title: string, url: string): Promise<void> {
+  const handle = process.env.BLUESKY_HANDLE;
+  const appPassword = process.env.BLUESKY_APP_PASSWORD;
 
-async function postToBluesky(title: string, url: string) {
-  const handle = process.env.BLUESKY_HANDLE!;
-  const appPassword = process.env.BLUESKY_APP_PASSWORD!;
+  if (!handle || !appPassword) {
+    throw new Error("BLUESKY_HANDLE or BLUESKY_APP_PASSWORD are not set");
+  }
 
   const agent = new AtpAgent({ service: "https://bsky.social" });
-  const client = new AppBskyClient({ agent });
 
   await agent.login({ identifier: handle, password: appPassword });
 
   const content = `${title}\n\n${url}`;
 
-  await client.post.create({
-    text: content,
-    createdAt: new Date().toISOString(),
+  await agent.api.app.bsky.feed.post.create({
+    repo: agent.session?.did!,
+    collection: "app.bsky.feed.post",
+    record: {
+      text: content,
+      createdAt: new Date().toISOString(),
+    },
   });
 
-  console.log("Posted to Bluesky:", title);
-} catch (err) {
-    console.error("Error posting to Bluesky:", err);
-    throw err;
-  }
+  console.log("Posted to Bluesky successfully:", title);
 }
 
 async function main() {
@@ -190,7 +189,6 @@ async function main() {
 
   const positiveArticles = await fetchRecentPositiveHeadlines();
 
-  // Filter out duplicates and recently posted keywords
   const candidates = positiveArticles.filter(({ entry, keywords }) => {
     const normalizedTitle = normalizeTitle(entry.title!);
     if (postedLinks.includes(normalizedTitle)) return false;
@@ -223,9 +221,9 @@ async function main() {
     recentKeywords.push(...chosen.keywords);
     await saveListToFile(recentKeywords.slice(-20), RECENT_KEYWORDS_FILE);
 
-    console.log("Successfully posted to Bluesky:", title);
+    console.log("Successfully posted:", title);
   } catch (err) {
-    console.error("Failed to post to Bluesky:", err);
+    console.error("Failed to post:", err);
   }
 }
 
