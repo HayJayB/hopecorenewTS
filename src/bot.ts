@@ -171,14 +171,13 @@ async function postToBluesky(title: string, url: string): Promise<void> {
 
   const content = `${title}\n\n${url}`;
 
-  await agent.api.app.bsky.feed.post.create({
-    repo: agent.session?.did!,
-    collection: "app.bsky.feed.post",
-    record: {
+  await agent.api.app.bsky.feed.post.create(
+    agent.session?.did!,
+    {
       text: content,
       createdAt: new Date().toISOString(),
-    },
-  });
+    }
+  );
 
   console.log("Posted to Bluesky successfully:", title);
 }
