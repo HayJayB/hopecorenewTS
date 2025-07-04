@@ -159,33 +159,26 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function postToBluesky(title: string, url: string): Promise<void> {
-  const handle = process.env.BLUESKY_HANDLE;
-  const appPassword = process.env.BLUESKY_APP_PASSWORD;
+import { AtpAgent, AppBskyClient } from "@atproto/api";
 
-  if (!handle || !appPassword) {
-    throw new Error(
-      "BLUESKY_HANDLE or BLUESKY_APP_PASSWORD environment variables not set"
-    );
-  }
+async function postToBluesky(title: string, url: string) {
+  const handle = process.env.BLUESKY_HANDLE!;
+  const appPassword = process.env.BLUESKY_APP_PASSWORD!;
 
   const agent = new AtpAgent({ service: "https://bsky.social" });
+  const client = new AppBskyClient({ agent });
 
-  try {
-    await agent.login({ identifier: handle, password: appPassword });
+  await agent.login({ identifier: handle, password: appPassword });
 
-    const content = `${title}\n\n${url}`;
+  const content = `${title}\n\n${url}`;
 
-    await agent.app.bsky.feed.post.create({
-      repo: agent.session?.did || "",
-      record: {
-        text: content,
-        createdAt: new Date().toISOString(),
-      },
-    });
+  await client.post.create({
+    text: content,
+    createdAt: new Date().toISOString(),
+  });
 
-    console.log("Posted to Bluesky successfully:", title);
-  } catch (err) {
+  console.log("Posted to Bluesky:", title);
+} catch (err) {
     console.error("Error posting to Bluesky:", err);
     throw err;
   }
