@@ -8,20 +8,105 @@ import {
   normalizeTitle,
   adjustedSentiment,
 } from "./utils";
-
 import { AtpAgent } from "@atproto/api";
-import {
-  MAX_DAYS_OLD,
-  MAX_POSTED_LINKS,
-  POSITIVE_THRESHOLD,
-  POSITIVE_KEYWORDS,
-  NEGATIVE_KEYWORDS,
-  RSS_FEEDS,
-  POSTED_LINKS_FILE,
-  RECENT_KEYWORDS_FILE,
-} from "./config";
 
 const parser = new Parser();
+
+const MAX_DAYS_OLD = 14;
+const POSITIVE_THRESHOLD = 0.1;
+const MAX_POSTED_LINKS = 50;
+
+const POSITIVE_KEYWORDS = [
+  "win",
+  "victory",
+  "gains",
+  "success",
+  "growth",
+  "solidarity",
+  "organize",
+  "strike",
+  "socialist",
+  "left wing",
+  "union",
+  "responsibility",
+  "mobilize",
+  "charity",
+  "outreach",
+  "resistance",
+  "community",
+  "truth",
+  "celebrate",
+  "local",
+  "save",
+  "future",
+  "knock",
+  "knocks",
+  "healing",
+  "hope",
+  "love",
+  "progressive",
+  "champion",
+  "leader",
+  "ceasefire",
+];
+
+const NEGATIVE_KEYWORDS = [
+  "death",
+  "deadly",
+  "killed",
+  "kill",
+  "killing",
+  "violence",
+  "attack",
+  "crisis",
+  "disaster",
+  "scandal",
+  "accident",
+  "injured",
+  "tragedy",
+  "fraud",
+  "collapse",
+  "bomb",
+  "shooting",
+  "war",
+  "loser",
+  "awful",
+  "horrible",
+  "terrible",
+  "tragic",
+  "destroy",
+  "raiding",
+  "raid",
+  "gut",
+  "fear",
+  "broken",
+  "destruction",
+];
+
+const RSS_FEEDS = [
+  "https://jacobin.com/feed",
+  "https://www.dsausa.org/feed/",
+  "https://www.thenation.com/feed/?post_type=article",
+  "https://inthesetimes.com/rss/articles",
+  "https://www.commondreams.org/rss-feed",
+  "https://truthout.org/feed/",
+  "https://progressive.org/feed/",
+  "https://theintercept.com/feed/",
+  "https://commonwealthclub.org/feed/podcast",
+  "https://www.theguardian.com/us-news/us-politics/rss",
+  "https://www.truthdig.com/feed/",
+  "https://www.counterpunch.org/feed/",
+  "https://www.democracynow.org/democracynow.rss",
+  "https://therealnews.com/feed/",
+  "https://labornotes.org/rss.xml",
+  "https://shadowproof.com/feed/",
+  "https://popularresistance.org/feed/",
+  "https://wagingnonviolence.org/feed/",
+  "https://www.leftvoice.org/feed/",
+];
+
+const POSTED_LINKS_FILE = "data/posted_links.txt";
+const RECENT_KEYWORDS_FILE = "data/recent_keywords.txt";
 
 interface FeedEntry {
   title?: string;
@@ -86,15 +171,15 @@ async function postToBluesky(title: string, url: string): Promise<void> {
 
   const content = `${title}\n\n${url}`;
 
-  await agent.api.app.bsky.feed.post.create({
-    repo: agent.session?.did!,
-    collection: "app.bsky.feed.post",
-    record: {
+  // Corrected call to create() with repo and record as separate arguments
+  await agent.api.app.bsky.feed.post.create(
+    agent.session?.did!,
+    {
       $type: "app.bsky.feed.post",
       text: content,
       createdAt: new Date().toISOString(),
-    },
-  });
+    }
+  );
 
   console.log("Posted to Bluesky successfully:", title);
 }
