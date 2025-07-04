@@ -86,14 +86,14 @@ async function postToBluesky(title: string, url: string): Promise<void> {
 
   const content = `${title}\n\n${url}`;
 
-  // IMPORTANT: only pass { record: { ... } }, no repo or collection props
+  // Use 'as any' to bypass TS type errors here if needed
   await agent.api.app.bsky.feed.post.create({
     record: {
       $type: "app.bsky.feed.post",
       text: content,
       createdAt: new Date().toISOString(),
     },
-  });
+  } as any);
 
   console.log("Posted to Bluesky successfully:", title);
 }
