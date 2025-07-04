@@ -9,8 +9,7 @@ import {
   adjustedSentiment,
 } from "./utils";
 
-import { AtpAgent } from "@atproto/api";
-import type { AppBskyFeedPost } from "@atproto/api";
+import { BskyAgent } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -81,20 +80,15 @@ async function postToBluesky(title: string, url: string): Promise<void> {
     throw new Error("BLUESKY_HANDLE or BLUESKY_APP_PASSWORD are not set");
   }
 
-  const agent = new AtpAgent({ service: "https://bsky.social" });
+  const agent = new BskyAgent({ service: "https://bsky.social" });
 
   await agent.login({ identifier: handle, password: appPassword });
 
   const content = `${title}\n\n${url}`;
 
-  const postInput: AppBskyFeedPost.Record = {
-    $type: "app.bsky.feed.post",
+  await agent.post({
     text: content,
     createdAt: new Date().toISOString(),
-  };
-
-  await agent.api.app.bsky.feed.post.create({
-    record: postInput,
   });
 
   console.log("Posted to Bluesky successfully:", title);
