@@ -10,6 +10,7 @@ import {
 } from "./utils";
 
 import { AtpAgent } from "@atproto/api";
+import type { AppBskyFeedPost } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -86,14 +87,15 @@ async function postToBluesky(title: string, url: string): Promise<void> {
 
   const content = `${title}\n\n${url}`;
 
-  // Use 'as any' to bypass TS type errors here if needed
+  const postInput: AppBskyFeedPost.Record = {
+    $type: "app.bsky.feed.post",
+    text: content,
+    createdAt: new Date().toISOString(),
+  };
+
   await agent.api.app.bsky.feed.post.create({
-    record: {
-      $type: "app.bsky.feed.post",
-      text: content,
-      createdAt: new Date().toISOString(),
-    },
-  } as any);
+    record: postInput,
+  });
 
   console.log("Posted to Bluesky successfully:", title);
 }
