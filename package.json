@@ -9,7 +9,7 @@
     "dev": "ts-node src/bot.ts"
   },
   "dependencies": {
-    "@atproto/api": "^0.11.0",
+    "@atproto/api": "^0.15.23",
     "rss-parser": "^3.12.0",
     "sentiment": "^5.0.2",
     "dotenv": "^16.0.3",
