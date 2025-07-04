@@ -2,11 +2,110 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import Parser from "rss-parser";
-import { MAX_DAYS_OLD, POSITIVE_THRESHOLD, POSITIVE_KEYWORDS, NEGATIVE_KEYWORDS, RSS_FEEDS, POSTED_LINKS_FILE, RECENT_KEYWORDS_FILE } from "./config";
-import { normalizeTitle, adjustedSentiment, loadListFromFile, saveListToFile } from "./utils";
-import axios from "axios";
+import {
+  loadListFromFile,
+  saveListToFile,
+  normalizeTitle,
+  adjustedSentiment,
+} from "./utils";
 
 const parser = new Parser();
+
+const MAX_DAYS_OLD = 14;
+const POSITIVE_THRESHOLD = 0.1;
+const MAX_POSTED_LINKS = 50;
+
+const POSITIVE_KEYWORDS = [
+  "win",
+  "victory",
+  "gains",
+  "success",
+  "growth",
+  "solidarity",
+  "organize",
+  "strike",
+  "socialist",
+  "left wing",
+  "union",
+  "responsibility",
+  "mobilize",
+  "charity",
+  "outreach",
+  "resistance",
+  "community",
+  "truth",
+  "celebrate",
+  "local",
+  "save",
+  "future",
+  "knock",
+  "knocks",
+  "healing",
+  "hope",
+  "love",
+  "progressive",
+  "champion",
+  "leader",
+  "ceasefire",
+];
+
+const NEGATIVE_KEYWORDS = [
+  "death",
+  "deadly",
+  "killed",
+  "kill",
+  "killing",
+  "violence",
+  "attack",
+  "crisis",
+  "disaster",
+  "scandal",
+  "accident",
+  "injured",
+  "tragedy",
+  "fraud",
+  "collapse",
+  "bomb",
+  "shooting",
+  "war",
+  "loser",
+  "awful",
+  "horrible",
+  "terrible",
+  "tragic",
+  "destroy",
+  "raiding",
+  "raid",
+  "gut",
+  "fear",
+  "broken",
+  "destruction",
+];
+
+const RSS_FEEDS = [
+  "https://jacobin.com/feed",
+  "https://www.dsausa.org/feed/",
+  "https://www.thenation.com/feed/?post_type=article",
+  "https://inthesetimes.com/rss/articles",
+  "https://www.commondreams.org/rss-feed",
+  "https://truthout.org/feed/",
+  "https://progressive.org/feed/",
+  "https://theintercept.com/feed/",
+  "https://commonwealthclub.org/feed/podcast",
+  "https://www.theguardian.com/us-news/us-politics/rss",
+  "https://www.truthdig.com/feed/",
+  "https://www.counterpunch.org/feed/",
+  "https://www.democracynow.org/democracynow.rss",
+  "https://therealnews.com/feed/",
+  "https://labornotes.org/rss.xml",
+  "https://shadowproof.com/feed/",
+  "https://popularresistance.org/feed/",
+  "https://wagingnonviolence.org/feed/",
+  "https://www.leftvoice.org/feed/",
+];
+
+const POSTED_LINKS_FILE = "data/posted_links.txt";
+const RECENT_KEYWORDS_FILE = "data/recent_keywords.txt";
 
 interface FeedEntry {
   title: string;
@@ -15,7 +114,9 @@ interface FeedEntry {
   [key: string]: any;
 }
 
-async function fetchRecentPositiveHeadlines(): Promise<{ entry: FeedEntry; keywords: string[] }[]> {
+async function fetchRecentPositiveHeadlines(): Promise<
+  { entry: FeedEntry; keywords: string[] }[]
+> {
   const allEntries: FeedEntry[] = [];
 
   for (const feedUrl of RSS_FEEDS) {
@@ -31,7 +132,7 @@ async function fetchRecentPositiveHeadlines(): Promise<{ entry: FeedEntry; keywo
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
   // Filter and score entries
-  const filtered = allEntries.filter(entry => {
+  const filtered = allEntries.filter((entry) => {
     if (!entry.pubDate) return false;
     const pubDate = new Date(entry.pubDate);
     if (pubDate < cutoffDate) return false;
@@ -39,15 +140,19 @@ async function fetchRecentPositiveHeadlines(): Promise<{ entry: FeedEntry; keywo
     const sentimentScore = adjustedSentiment(entry.title, NEGATIVE_KEYWORDS);
     if (sentimentScore < POSITIVE_THRESHOLD) return false;
 
-    const keywordsInTitle = POSITIVE_KEYWORDS.filter(k => entry.title.toLowerCase().includes(k));
+    const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
+      entry.title.toLowerCase().includes(k)
+    );
     if (keywordsInTitle.length === 0) return false;
 
     return true;
   });
 
-  return filtered.map(entry => ({
+  return filtered.map((entry) => ({
     entry,
-    keywords: POSITIVE_KEYWORDS.filter(k => entry.title.toLowerCase().includes(k)),
+    keywords: POSITIVE_KEYWORDS.filter((k) =>
+      entry.title.toLowerCase().includes(k)
+    ),
   }));
 }
 
@@ -56,14 +161,13 @@ async function postToBluesky(title: string, url: string): Promise<void> {
   const appPassword = process.env.BLUESKY_APP_PASSWORD;
 
   if (!handle || !appPassword) {
-    throw new Error("BLUESKY_HANDLE or BLUESKY_APP_PASSWORD environment variables not set");
+    throw new Error(
+      "BLUESKY_HANDLE or BLUESKY_APP_PASSWORD environment variables not set"
+    );
   }
 
-  // TODO: Use official atproto client if available, else custom axios calls to Bluesky API
-
-  // Example placeholder logic:
+  // TODO: Replace this stub with real Bluesky API integration using atproto or axios
   console.log(`Posting to Bluesky: ${title} - ${url}`);
-  // Here you would authenticate and post with the Bluesky API client.
 }
 
 async function main() {
@@ -91,7 +195,10 @@ async function main() {
 
   // Pick one at random
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-  const title = chosen.entry.title.length > 256 ? chosen.entry.title.slice(0, 253) + "..." : chosen.entry.title;
+  const title =
+    chosen.entry.title.length > 256
+      ? chosen.entry.title.slice(0, 253) + "..."
+      : chosen.entry.title;
   const url = chosen.entry.link;
 
   try {
