@@ -1,23 +1,29 @@
-name: Post Positive Bluesky News
+name: Post Bluesky News
 
 on:
-  schedule:
-    - cron: '0 9 * * *'  # Runs daily at 9 AM UTC
-  workflow_dispatch:
+  workflow_dispatch:     # Manual trigger only
 
 jobs:
-  post-news:
+  run-bot:
     runs-on: ubuntu-latest
-    env:
-      BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
-      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+
       - name: Install dependencies
-        run: npm ci
+        run: npm install
+
+      - name: Build TypeScript
+        run: npm run build
+
       - name: Run bot
-        run: npm run build && npm start
+        env:
+          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
+        run: node dist/bot.js
