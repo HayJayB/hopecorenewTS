@@ -27,6 +27,9 @@ interface FeedEntry {
   title?: string;
   link?: string;
   pubDate?: string;
+  contentSnippet?: string;
+  enclosure?: { url?: string }; // some feeds use enclosure for images
+  "media:thumbnail"?: { url?: string }; // some use media:thumbnail
   [key: string]: any;
 }
 
@@ -72,7 +75,21 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function postToBluesky(title: string, url: string): Promise<void> {
+function extractThumbnail(entry: FeedEntry): string | undefined {
+  // Try common thumbnail locations in RSS feed item
+  if (entry.enclosure?.url) return entry.enclosure.url;
+  if (entry["media:thumbnail"]?.url) return entry["media:thumbnail"].url;
+  if (entry["media:content"]?.url) return entry["media:content"].url;
+  // Some feeds put images inside content or contentSnippet (you could add more parsing here)
+  return undefined;
+}
+
+async function postToBluesky(
+  title: string,
+  url: string,
+  imageUrl?: string,
+  description?: string
+): Promise<void> {
   const handle = process.env.BLUESKY_HANDLE;
   const appPassword = process.env.BLUESKY_APP_PASSWORD;
 
@@ -84,14 +101,23 @@ async function postToBluesky(title: string, url: string): Promise<void> {
 
   await agent.login({ identifier: handle, password: appPassword });
 
-  const content = `${title}\n\n${url}`;
-
-  await agent.post({
-    text: content,
+  const postInput = {
+    text: title,
     createdAt: new Date().toISOString(),
-  });
+    embed: {
+      $type: "app.bsky.embed.external",
+      external: {
+        uri: url,
+        title,
+        description: description || "",
+        thumb: imageUrl || "",
+      },
+    },
+  };
 
-  console.log("Posted to Bluesky successfully:", title);
+  await agent.post(postInput);
+
+  console.log("Posted card to Bluesky successfully:", title);
 }
 
 async function main() {
@@ -122,9 +148,11 @@ async function main() {
       ? chosen.entry.title!.slice(0, 253) + "..."
       : chosen.entry.title!;
   const url = chosen.entry.link!;
+  const imageUrl = extractThumbnail(chosen.entry);
+  const description = chosen.entry.contentSnippet || "";
 
   try {
-    await postToBluesky(title, url);
+    await postToBluesky(title, url, imageUrl, description);
 
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
