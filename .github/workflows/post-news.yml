@@ -1,14 +1,14 @@
 name: Post Bluesky News
 
 on:
-  workflow_dispatch:     # Manual trigger only
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Setup Node.js
