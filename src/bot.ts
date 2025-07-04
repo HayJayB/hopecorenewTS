@@ -1,5 +1,3 @@
-// src/bot.ts
-
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -112,8 +110,8 @@ const POSTED_LINKS_FILE = "data/posted_links.txt";
 const RECENT_KEYWORDS_FILE = "data/recent_keywords.txt";
 
 interface FeedEntry {
-  title: string;
-  link: string;
+  title?: string;
+  link?: string;
   pubDate?: string;
   [key: string]: any;
 }
@@ -137,7 +135,8 @@ async function fetchRecentPositiveHeadlines(): Promise<
 
   // Filter and score entries
   const filtered = allEntries.filter((entry) => {
-    if (!entry.pubDate) return false;
+    if (!entry.title || !entry.link || !entry.pubDate) return false;
+
     const pubDate = new Date(entry.pubDate);
     if (pubDate < cutoffDate) return false;
 
@@ -145,7 +144,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
     if (sentimentScore < POSITIVE_THRESHOLD) return false;
 
     const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
-      entry.title.toLowerCase().includes(k)
+      entry.title!.toLowerCase().includes(k)
     );
     if (keywordsInTitle.length === 0) return false;
 
@@ -155,7 +154,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
   return filtered.map((entry) => ({
     entry,
     keywords: POSITIVE_KEYWORDS.filter((k) =>
-      entry.title.toLowerCase().includes(k)
+      entry.title!.toLowerCase().includes(k)
     ),
   }));
 }
@@ -173,14 +172,17 @@ async function postToBluesky(title: string, url: string): Promise<void> {
   const agent = new AtpAgent({ service: "https://bsky.social" });
 
   try {
-    // Authenticate
     await agent.login({ identifier: handle, password: appPassword });
 
-    // Compose post content
     const content = `${title}\n\n${url}`;
 
-    // Post to Bluesky
-    await agent.post({ text: content });
+    await agent.app.bsky.feed.post.create({
+      repo: agent.session?.did || "",
+      record: {
+        text: content,
+        createdAt: new Date().toISOString(),
+      },
+    });
 
     console.log("Posted to Bluesky successfully:", title);
   } catch (err) {
@@ -197,7 +199,7 @@ async function main() {
 
   // Filter out duplicates and recently posted keywords
   const candidates = positiveArticles.filter(({ entry, keywords }) => {
-    const normalizedTitle = normalizeTitle(entry.title);
+    const normalizedTitle = normalizeTitle(entry.title!);
     if (postedLinks.includes(normalizedTitle)) return false;
 
     for (const kw of keywords) {
@@ -212,22 +214,19 @@ async function main() {
     return;
   }
 
-  // Pick one at random
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
   const title =
-    chosen.entry.title.length > 256
-      ? chosen.entry.title.slice(0, 253) + "..."
-      : chosen.entry.title;
-  const url = chosen.entry.link;
+    chosen.entry.title!.length > 256
+      ? chosen.entry.title!.slice(0, 253) + "..."
+      : chosen.entry.title!;
+  const url = chosen.entry.link!;
 
   try {
     await postToBluesky(title, url);
 
-    // Update tracking files
-    postedLinks.push(normalizeTitle(chosen.entry.title));
+    postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
 
-    // Add new keywords to recent keywords list (keep last 20 for example)
     recentKeywords.push(...chosen.keywords);
     await saveListToFile(recentKeywords.slice(-20), RECENT_KEYWORDS_FILE);
 
