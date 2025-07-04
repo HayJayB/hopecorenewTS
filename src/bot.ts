@@ -86,9 +86,8 @@ async function postToBluesky(title: string, url: string): Promise<void> {
 
   const content = `${title}\n\n${url}`;
 
+  // IMPORTANT: only pass { record: { ... } }, no repo or collection props
   await agent.api.app.bsky.feed.post.create({
-    repo: agent.session?.did!,
-    collection: "app.bsky.feed.post",
     record: {
       $type: "app.bsky.feed.post",
       text: content,
