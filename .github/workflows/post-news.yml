@@ -33,38 +33,3 @@ jobs:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
         run: node dist/bot.js
-name: Post Bluesky News
-
-on:
-  workflow_dispatch:  # Manual trigger
-
-jobs:
-  run-bot:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Clean previous build
-        run: rm -rf dist node_modules
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Verify installed @atproto/api version
-        run: npm list @atproto/api
-
-      - name: Build TypeScript
-        run: npm run build
-
-      - name: Run bot
-        env:
-          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
-          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
-        run: node dist/bot.js
