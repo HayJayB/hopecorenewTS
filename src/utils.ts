@@ -4,8 +4,7 @@ import Sentiment from "sentiment";
 
 const sentiment = new Sentiment();
 
-const HF_API_URL =
-  "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english";
+const HF_API_URL = "https://api-inference.huggingface.co/models/cardiffnlp/twitter-roberta-base-sentiment";
 const HF_API_TOKEN = process.env.HF_API_TOKEN;
 
 /**
