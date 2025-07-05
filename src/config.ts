@@ -6,26 +6,26 @@ export const MAX_POSTED_LINKS = 63;
 export const MAX_DAYS_OLD = 14;
 export const POSITIVE_THRESHOLD = 0.1;
 
-export const RSS_FEEDS = [
-  "https://jacobin.com/feed",
-  "https://www.dsausa.org/feed/",
-  "https://www.thenation.com/feed/?post_type=article",
-  "https://inthesetimes.com/rss",
-  "https://www.commondreams.org/rss.xml",
-  "https://truthout.org/feed/",
-  "https://progressive.org/feed/",
-  "https://theintercept.com/feed/",
-  "https://commonwealthclub.org/feed/podcast",
-  "https://www.theguardian.com/us-news/us-politics/rss",
-  "https://www.truthdig.com/feed/",
-  "https://www.counterpunch.org/feed/",
-  "https://www.democracynow.org/democracynow.rss",
-  "https://therealnews.com/feed/",
-  "https://labornotes.org/rss.xml",
-  "https://shadowproof.com/feed/",
-  "https://popularresistance.org/feed/",
-  "https://wagingnonviolence.org/feed/",
-  "https://www.leftvoice.org/feed/",
+ //export const RSS_FEEDS = [
+  //"https://jacobin.com/feed",
+  //"https://www.dsausa.org/feed/",
+  //"https://www.thenation.com/feed/?post_type=article",
+  //"https://inthesetimes.com/rss",
+  //"https://www.commondreams.org/rss.xml",
+  //"https://truthout.org/feed/",
+  //"https://progressive.org/feed/",
+  //"https://theintercept.com/feed/",
+  //"https://commonwealthclub.org/feed/podcast",
+  //"https://www.theguardian.com/us-news/us-politics/rss",
+  //"https://www.truthdig.com/feed/",
+  //"https://www.counterpunch.org/feed/",
+  //"https://www.democracynow.org/democracynow.rss",
+  //"https://therealnews.com/feed/",
+  //"https://labornotes.org/rss.xml",
+  //"https://shadowproof.com/feed/",
+  //"https://popularresistance.org/feed/",
+  //"https://wagingnonviolence.org/feed/",
+  //"https://www.leftvoice.org/feed/",
 ];
 
 export const POSITIVE_KEYWORDS = [
