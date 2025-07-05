@@ -39,8 +39,8 @@ const customFetch = async (url: string, options = {}) => {
 
 // 👇 Use customFetch so feeds don't return 403
 const parser = new Parser({
-  customFetch,
-});
+  customFetch
+} as any);
 
 interface FeedEntry {
   title?: string;
