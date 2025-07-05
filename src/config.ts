@@ -4,7 +4,7 @@ const rootDir = process.cwd();
 
 export const MAX_POSTED_LINKS = 63;
 export const MAX_DAYS_OLD = 14;
-export const POSITIVE_THRESHOLD = 0.1;
+export const POSITIVE_THRESHOLD = 0.85;
 
  //export const RSS_FEEDS = [
   //"https://jacobin.com/feed",
