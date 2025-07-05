@@ -16,7 +16,7 @@ import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
   POSITIVE_THRESHOLD,
-  ALL_KEYWORD_GROUPS, // Make sure you export this array of keyword groups from config
+  ALL_KEYWORD_GROUPS,
   POSTED_LINKS_FILE,
   RECENT_KEYWORDS_FILE,
 } from "./config";
@@ -30,86 +30,77 @@ interface Article {
 }
 
 /**
- * Fetch recent headlines from NewsAPI for multiple keyword groups with sentiment filtering
+ * Fetch recent headlines from NewsAPI using multiple keyword groups sequentially,
+ * then merges and filters results by sentiment and keywords.
  */
 async function fetchRecentProgressiveHeadlines(): Promise<
   { entry: Article; keywords: string[] }[]
 > {
   const apiKey = process.env.NEWSAPI_KEY;
-  if (!apiKey) {
-    throw new Error("NEWSAPI_KEY is not set in .env");
-  }
-
-  let combinedArticles: { entry: Article; keywords: string[] }[] = [];
+  if (!apiKey) throw new Error("NEWSAPI_KEY is not set in .env");
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-  // Loop through each keyword group and fetch articles
+  const foundArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
+
   for (const keywordGroup of ALL_KEYWORD_GROUPS) {
-    const query = keywordGroup.join(" OR ");
+    if (keywordGroup.length === 0) continue;
+
+    // Build OR query from keywords in this group
+    const query = keywordGroup.map(k => `"${k}"`).join(" OR ");
+
     const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
       query
     )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
 
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        console.warn(
-          `NewsAPI request failed for keywords: ${query} - ${response.statusText}`
-        );
-        continue; // Skip this group and continue with next
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`NewsAPI request failed: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const articles: Article[] = data.articles;
+
+    // For each article, analyze sentiment and filter by date & sentiment
+    const titles = articles
+      .filter((a) => a.title && a.publishedAt)
+      .map((a) => a.title!);
+
+    const sentiments = await Promise.all(titles.map((title) => analyzeSentiment(title)));
+
+    for (let i = 0; i < articles.length; i++) {
+      const entry = articles[i];
+      const sentiment = sentiments[i];
+
+      if (!entry.title || !entry.url || !entry.publishedAt) continue;
+
+      const pubDate = new Date(entry.publishedAt);
+      if (pubDate < cutoffDate) continue;
+
+      // Accept either "POSITIVE" or "LABEL_1" as positive sentiment labels
+      if (sentiment.label !== "POSITIVE" && sentiment.label !== "LABEL_1") continue;
+
+      if (sentiment.score < POSITIVE_THRESHOLD) continue;
+
+      // Check which keywords from this group appear in title (case-insensitive)
+      const titleLower = entry.title.toLowerCase();
+      const matchedKeywords = keywordGroup.filter((k) => titleLower.includes(k.toLowerCase()));
+
+      if (matchedKeywords.length === 0) continue;
+
+      // Use normalized title as unique key to avoid duplicates
+      const normalized = normalizeTitle(entry.title);
+
+      // Store if not already added
+      if (!foundArticlesMap.has(normalized)) {
+        foundArticlesMap.set(normalized, { entry, keywords: matchedKeywords });
       }
-
-      const data = await response.json();
-      const articles: Article[] = data.articles;
-
-      // Filter articles by date and required fields
-      const filtered = articles
-        .filter(
-          (a) =>
-            a.title &&
-            a.url &&
-            a.publishedAt &&
-            new Date(a.publishedAt) >= cutoffDate
-        )
-        .map((a) => ({
-          entry: a,
-          keywords: keywordGroup,
-        }));
-
-      combinedArticles.push(...filtered);
-    } catch (error) {
-      console.warn(`Error fetching articles for keywords: ${query}`, error);
-      continue;
     }
   }
 
-  // Deduplicate by normalized title
-  const uniqueArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
-  for (const item of combinedArticles) {
-    const normTitle = normalizeTitle(item.entry.title!);
-    if (!uniqueArticlesMap.has(normTitle)) {
-      uniqueArticlesMap.set(normTitle, item);
-    }
-  }
-  const uniqueArticles = Array.from(uniqueArticlesMap.values());
-
-  // Perform sentiment analysis concurrently
-  const sentiments = await Promise.all(
-    uniqueArticles.map(({ entry }) => analyzeSentiment(entry.title!))
-  );
-
-  // Filter by sentiment and threshold
-  const positiveArticles = uniqueArticles
-    .map(({ entry, keywords }, i) => ({ entry, keywords, sentiment: sentiments[i] }))
-    .filter(
-      ({ sentiment }) =>
-        (sentiment.label === "POSITIVE" || sentiment.label === "LABEL_1") &&
-        sentiment.score >= POSITIVE_THRESHOLD
-    );
-
-  return positiveArticles;
+  // Return all unique articles found across keyword groups
+  return Array.from(foundArticlesMap.values());
 }
 
 async function uploadImageAsBlob(
@@ -118,9 +109,7 @@ async function uploadImageAsBlob(
 ): Promise<BlobRef> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
-    throw new Error(
-      `Failed to fetch image for blob upload: ${response.statusText}`
-    );
+    throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer: Buffer = await response.buffer();
 
@@ -146,7 +135,6 @@ async function postToBluesky(
   }
 
   const agent = new BskyAgent({ service: "https://bsky.social" });
-
   await agent.login({ identifier: handle, password: appPassword });
 
   let blobRef: BlobRef | undefined;
@@ -188,12 +176,14 @@ async function main() {
 
   const progressiveArticles = await fetchRecentProgressiveHeadlines();
 
+  // Filter articles to exclude already posted titles and recently used keywords
   const candidates = progressiveArticles.filter(({ entry, keywords }) => {
     const normalizedTitle = normalizeTitle(entry.title!);
     if (postedLinks.includes(normalizedTitle)) return false;
 
+    // Skip articles if any matched keyword was used recently
     for (const kw of keywords) {
-      if (recentKeywords.includes(kw)) return false;
+      if (recentKeywords.includes(kw.toLowerCase())) return false;
     }
 
     return true;
@@ -204,7 +194,10 @@ async function main() {
     return;
   }
 
+  // Pick a random article to post
   const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+
+  // Truncate title if necessary (limit 256 chars)
   const title =
     chosen.entry.title!.length > 256
       ? chosen.entry.title!.slice(0, 253) + "..."
@@ -216,10 +209,12 @@ async function main() {
   try {
     await postToBluesky(title, url, imageUrl, chosen.entry.description);
 
+    // Save posted link (normalized title)
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
 
-    recentKeywords.push(...chosen.keywords);
+    // Save recently used keywords (lowercased)
+    recentKeywords.push(...chosen.keywords.map(k => k.toLowerCase()));
     await saveListToFile(recentKeywords.slice(-4), RECENT_KEYWORDS_FILE);
 
     console.log("Successfully posted:", title);
