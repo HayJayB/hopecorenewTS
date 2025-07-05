@@ -44,5 +44,20 @@ export const NEGATIVE_KEYWORDS = [
   "conflict", "lawsuit", "charges", "indicted", "pleads guilty"
 ];
 
+export const PROGRESSIVE_KEYWORDS = [
+  "progressive", "progressivism", "socialism", "socialist", "left wing", "left-wing",
+  "leftist", "social justice", "justice", "income inequality", "bernie sanders",
+  "aoc", "alexandria ocasio-cortez", "labor rights", "minimum wage", "universal healthcare",
+  "medicare for all", "climate justice", "environmental justice", "black lives matter",
+  "racial justice", "lgbtq rights", "worker rights", "union", "wealth tax", "student debt",
+  "public education", "housing justice", "anti-capitalism", "equity", "green new deal", "fair wages", 
+  "collective bargaining", "food justice", "trans rights", "gender equality", "prison reform", 
+  "mass incarceration", "living wage", "civil rights", "income redistribution", "corporate accountability", 
+  "campaign finance reform", "progressive taxation", "universal basic income", "wealth inequality", 
+  "workers' rights", "climate action", "pollution reduction", "fossil fuel divestment", "renewable energy",
+  "transportation", "childcare", "equity", "gay ", "reform"
+];
+
+
 export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
 export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
