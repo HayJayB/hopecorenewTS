@@ -88,18 +88,16 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<st
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
 
-  // uploadBlob expects { encoding: mimeType }
-  const res = await agent.api.uploadBlob(buffer, {
-    encoding: mimeType,
+  // Corrected: use mimeType, no .json() call
+  const uploadResult = await agent.api.uploadBlob(buffer, {
+    mimeType,
   });
 
-  const json = await res.json();
-
-  if (!json.data || !json.data.blob) {
+  if (!uploadResult.data || !uploadResult.data.blob) {
     throw new Error("Blob reference not found in uploadBlob response");
   }
 
-  return json.data.blob;
+  return uploadResult.data.blob;
 }
 
 async function postToBluesky(
