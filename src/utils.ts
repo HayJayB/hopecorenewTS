@@ -59,11 +59,23 @@ export async function analyzeSentiment(texts: string[]): Promise<
 
   const json = await response.json();
 
-  return json.map((result: any) => ({
-    label: result[0].label,
-    score: result[0].score,
-  }));
+  // If input was a single string, wrap it in array for consistency
+  const resultsArray = Array.isArray(json[0]) ? json : [json];
+
+  return resultsArray.map((result: any) => {
+    // Find the label with the highest score
+    const best = result.reduce(
+      (max: any, curr: any) => (curr.score > max.score ? curr : max),
+      result[0]
+    );
+
+    return {
+      label: best.label,
+      score: best.score,
+    };
+  });
 }
+
 
 /**
  * Load lines from a file, ignoring empty lines
