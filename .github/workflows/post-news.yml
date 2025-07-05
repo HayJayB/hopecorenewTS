@@ -1,7 +1,7 @@
 name: Post Bluesky News
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   run-bot:
@@ -41,12 +41,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit updated files if any
+      - name: Commit and push changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           git add posted_links.txt recent_keywords.txt
           if ! git diff --cached --quiet; then
             git commit -m "Update posted links and recent keywords [skip ci]"
-            git push origin HEAD:${{ github.ref }}
+            git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/HayJayB/hopecorenewTS.git
+            git push origin HEAD:${{ github.ref_name }}
           else
             echo "No changes to commit"
           fi
