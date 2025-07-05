@@ -1,77 +1,224 @@
-import path from "path";
+// bot.ts
 
-const rootDir = process.cwd();
+import * as dotenv from "dotenv";
+dotenv.config();
 
-export const MAX_POSTED_LINKS = 63;
-export const MAX_DAYS_OLD = 14;
-export const POSITIVE_THRESHOLD = 0.75;
+import fetch from "node-fetch";
+import {
+  loadListFromFile,
+  saveListToFile,
+  normalizeTitle,
+  analyzeSentiment,
+} from "./utils";
 
-// File paths for storing posted and recent keywords
-export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
-export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
+import { BskyAgent } from "@atproto/api";
+import type { BlobRef } from "@atproto/api";
 
-// Keyword groups split by topic for finer control
-export const SOCIAL_JUSTICE_KEYWORDS = [
-  "progressive", "progressivism", "socialism", "socialist", "left wing", "left-wing", "leftist",
-  "social justice", "equity", "fair wages", "income inequality", "income redistribution", "wealth inequality",
-  "wealth tax", "progressive taxation", "anti-capitalism", "corporate accountability", "campaign finance reform",
-  "campaign finance transparency", "corporate greed", "corporate profiteering", "billionaire tax", "tax the rich",
-  "economic democracy", "solidarity economy", "economic justice", "community wealth building",
-  "community land trust", "public ownership", "public investment"
-];
+import {
+  MAX_DAYS_OLD,
+  MAX_POSTED_LINKS,
+  POSITIVE_THRESHOLD,
+  ALL_KEYWORD_GROUPS,
+  POSTED_LINKS_FILE,
+  RECENT_KEYWORDS_FILE,
+} from "./config";
 
-export const LABOR_HOUSING_KEYWORDS = [
-  "labor rights", "union", "unionization", "right to strike", "collective bargaining", "worker rights",
-  "workers' rights", "workers bill of rights", "labor movement", "gig economy", "living wage", "living wage jobs",
-  "minimum wage", "tenant union", "tenant rights", "tenant protections", "good cause eviction", "cancel rent",
-  "rent control", "universal rent control", "affordable housing", "affordable housing for all", "housing affordability",
-  "housing guarantee", "housing justice", "housing as a human right", "housing for all", "public housing",
-  "build public housing", "community control", "NYCHA funding", "stop gentrification", "social housing",
-  "cancel student debt", "abolish student debt", "student debt", "tuition free college", "free public college",
-  "public education", "universal pre-k", "public broadband", "childcare", "universal childcare", "paid family leave",
-  "paid sick leave", "right to strike"
-];
+interface Article {
+  title?: string;
+  url?: string;
+  publishedAt?: string;
+  description?: string;
+  urlToImage?: string;
+}
 
-export const ECONOMIC_POLICIES_KEYWORDS = [
-  // Economic policies keywords can be added here if needed,
-  // as you had no separate list for them in this snippet,
-  // or merge relevant ones from others if applicable.
-];
+async function fetchRecentProgressiveHeadlines(): Promise<
+  { entry: Article; keywords: string[] }[]
+> {
+  const apiKey = process.env.NEWSAPI_KEY;
+  if (!apiKey) throw new Error("NEWSAPI_KEY is not set in .env");
 
-export const CLIMATE_ENVIRONMENT_KEYWORDS = [
-  "climate justice", "environmental justice", "climate action", "green new deal", "green jobs", "climate jobs",
-  "climate resilience", "pollution reduction", "fossil fuel divestment", "renewable energy", "green infrastructure",
-  "decarbonization", "net zero emissions", "decarbonize economy", "zero emissions", "green transition",
-  "environmental racism", "youth climate movement"
-];
+  let combinedArticles: { entry: Article; keywords: string[] }[] = [];
 
-export const CIVIL_RIGHTS_KEYWORDS = [
-  "black lives matter", "lgbtq rights", "trans rights", "transgender", "gender equality", "gay", "civil rights",
-  "gender pay gap", "inclusivity", "racial disparities", "racial justice", "racial equity", "racial wealth gap",
-  "racial solidarity", "racial justice organizing", "prison reform", "mass incarceration", "end mass incarceration",
-  "decarceration", "abolish prisons", "prisoner rights", "prisoner's rights", "police accountability",
-  "police abolition", "defund the police", "abolish ice", "immigrant rights", "immigrant defense", "sanctuary cities",
-  "reproductive rights"
-];
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-export const PUBLIC_SERVICES_KEYWORDS = [
-  "public transit access", "public transportation", "transportation", "public option", "healthcare access",
-  "universal healthcare", "medicare for all", "medicare expansion", "expanding medicare", "single payer healthcare",
-  "medicare", "dignity in retirement", "free public college", "tuition free college", "public broadband",
-  "childcare", "universal childcare", "paid family leave", "paid sick leave", "public housing", "public education",
-  "universal pre-k"
-];
+  for (const keywordGroup of ALL_KEYWORD_GROUPS) {
+    const query = keywordGroup.join(" OR ");
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+      query
+    )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
 
-export const PERSONALITIES_KEYWORDS = [
-  "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "zohran", "mamdani", "dsa"
-];
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.warn(
+          `NewsAPI request failed for keywords: ${query} - ${response.statusText}`
+        );
+        continue;
+      }
 
-// Collect all keyword groups to iterate over in bot.ts
-export const ALL_KEYWORD_GROUPS = [
-  SOCIAL_JUSTICE_KEYWORDS,
-  LABOR_HOUSING_KEYWORDS,
-  CIVIL_RIGHTS_KEYWORDS,
-  PUBLIC_SERVICES_KEYWORDS,
-  CLIMATE_ENVIRONMENT_KEYWORDS,
-  PERSONALITIES_KEYWORDS,
-];
+      const data = await response.json();
+      const articles: Article[] = data.articles;
+
+      const filtered = articles
+        .filter(
+          (a) =>
+            a.title &&
+            a.url &&
+            a.publishedAt &&
+            new Date(a.publishedAt) >= cutoffDate
+        )
+        .map((a) => ({
+          entry: a,
+          keywords: keywordGroup,
+        }));
+
+      combinedArticles.push(...filtered);
+    } catch (error) {
+      console.warn(`Error fetching articles for keywords: ${query}`, error);
+      continue;
+    }
+  }
+
+  // Deduplicate by normalized title
+  const uniqueArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
+  for (const item of combinedArticles) {
+    const normTitle = normalizeTitle(item.entry.title!);
+    if (!uniqueArticlesMap.has(normTitle)) uniqueArticlesMap.set(normTitle, item);
+  }
+  const uniqueArticles = Array.from(uniqueArticlesMap.values());
+
+  // Sentiment analysis concurrently
+  const sentiments = await Promise.all(
+    uniqueArticles.map(({ entry }) => analyzeSentiment(entry.title!))
+  );
+
+  // Filter positive sentiment by threshold
+  const positiveArticles = uniqueArticles
+    .map(({ entry, keywords }, i) => ({ entry, keywords, sentiment: sentiments[i] }))
+    .filter(
+      ({ sentiment }) =>
+        (sentiment.label === "POSITIVE" || sentiment.label === "LABEL_1") &&
+        sentiment.score >= POSITIVE_THRESHOLD
+    );
+
+  return positiveArticles;
+}
+
+async function uploadImageAsBlob(
+  agent: BskyAgent,
+  imageUrl: string
+): Promise<BlobRef> {
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch image for blob upload: ${response.statusText}`
+    );
+  }
+  const buffer: Buffer = await response.buffer();
+
+  let encoding = "image/jpeg";
+  if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
+  else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
+
+  const uploadResult = await agent.api.uploadBlob(buffer, { encoding });
+  return uploadResult.data.blob;
+}
+
+async function postToBluesky(
+  title: string,
+  url: string,
+  imageUrl?: string,
+  description?: string
+): Promise<void> {
+  const handle = process.env.BLUESKY_HANDLE;
+  const appPassword = process.env.BLUESKY_APP_PASSWORD;
+
+  if (!handle || !appPassword) {
+    throw new Error("BLUESKY_HANDLE or BLUESKY_APP_PASSWORD are not set");
+  }
+
+  const agent = new BskyAgent({ service: "https://bsky.social" });
+
+  await agent.login({ identifier: handle, password: appPassword });
+
+  let blobRef: BlobRef | undefined;
+  if (imageUrl) {
+    try {
+      blobRef = await uploadImageAsBlob(agent, imageUrl);
+    } catch (err) {
+      console.warn("Image blob upload failed, posting without thumbnail:", err);
+    }
+  }
+
+  const postInput: any = {
+    text: title,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (blobRef) {
+    postInput.embed = {
+      $type: "app.bsky.embed.external",
+      external: {
+        uri: url,
+        title,
+        description: description || "",
+        thumb: blobRef,
+      },
+    };
+  } else {
+    postInput.text += `\n\n${url}`;
+  }
+
+  await agent.post(postInput);
+
+  console.log("Posted to Bluesky successfully:", title);
+}
+
+async function main() {
+  const postedLinks = await loadListFromFile(POSTED_LINKS_FILE);
+  const recentKeywords = await loadListFromFile(RECENT_KEYWORDS_FILE);
+
+  const progressiveArticles = await fetchRecentProgressiveHeadlines();
+
+  const candidates = progressiveArticles.filter(({ entry, keywords }) => {
+    const normalizedTitle = normalizeTitle(entry.title!);
+    if (postedLinks.includes(normalizedTitle)) return false;
+
+    for (const kw of keywords) {
+      if (recentKeywords.includes(kw)) return false;
+    }
+
+    return true;
+  });
+
+  if (candidates.length === 0) {
+    console.log("No new progressive articles found to post.");
+    return;
+  }
+
+  const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+  const title =
+    chosen.entry.title!.length > 256
+      ? chosen.entry.title!.slice(0, 253) + "..."
+      : chosen.entry.title!;
+
+  const url = chosen.entry.url!;
+  const imageUrl = chosen.entry.urlToImage;
+
+  try {
+    await postToBluesky(title, url, imageUrl, chosen.entry.description);
+
+    postedLinks.push(normalizeTitle(chosen.entry.title!));
+    await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
+
+    recentKeywords.push(...chosen.keywords);
+    await saveListToFile(recentKeywords.slice(-4), RECENT_KEYWORDS_FILE);
+
+    console.log("Successfully posted:", title);
+  } catch (err) {
+    console.error("Failed to post:", err);
+  }
+}
+
+main().catch(console.error);
