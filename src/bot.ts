@@ -10,8 +10,7 @@ import {
   adjustedSentiment,
 } from "./utils";
 
-import { BskyAgent } from "@atproto/api";
-import type { AppBskyFeedPost } from "@atproto/api";
+import { BskyAgent, type BlobRef } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -76,28 +75,21 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<BlobRef> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer: Buffer = await response.buffer();
 
-  // Detect mime type by file extension fallback to jpeg
-  let mimeType = "image/jpeg";
-  if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
-  else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
+  // Use 'encoding' option expected by uploadBlob
+  let encoding = "image/jpeg";
+  if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
+  else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
-  // Corrected: use mimeType, no .json() call
-  const uploadResult = await agent.api.uploadBlob(buffer, {
-    mimeType,
-  });
+  const blobRef = await agent.api.uploadBlob(buffer, { encoding });
 
-  if (!uploadResult.data || !uploadResult.data.blob) {
-    throw new Error("Blob reference not found in uploadBlob response");
-  }
-
-  return uploadResult.data.blob;
+  return blobRef;
 }
 
 async function postToBluesky(
@@ -117,7 +109,7 @@ async function postToBluesky(
 
   await agent.login({ identifier: handle, password: appPassword });
 
-  let blobRef: string | undefined;
+  let blobRef: BlobRef | undefined;
   if (imageUrl) {
     try {
       blobRef = await uploadImageAsBlob(agent, imageUrl);
