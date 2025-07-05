@@ -28,7 +28,7 @@ export const PROGRESSIVE_KEYWORDS_SOCIAL_2 = [
 ];
 
 export const PROGRESSIVE_KEYWORDS_LABOR_1 = [
-  "labor rights", "union", "unionization", "right to strike", "collective bargaining",
+  "labor rights", "unionization", "right to strike", "collective bargaining",
   "worker rights", "workers' rights", "workers bill of rights", "labor movement",
   "gig economy", "living wage", "living wage jobs", "minimum wage", "tenant union",
   "tenant rights", "tenant protections", "good cause eviction", "cancel rent",
@@ -37,7 +37,7 @@ export const PROGRESSIVE_KEYWORDS_LABOR_1 = [
 
 export const PROGRESSIVE_KEYWORDS_LABOR_2 = [
   "affordable housing", "affordable housing for all", "housing affordability",
-  "housing guarantee", "housing justice", "housing as a human right", "housing for all",
+  "housing guarantee", "housing justice", "human right", "housing for all",
   "public housing", "build public housing", "community control", "NYCHA funding",
   "stop gentrification", "social housing", "cancel student debt", "abolish student debt",
   "student debt", "tuition free college", "free public college", "public education",
@@ -76,7 +76,7 @@ export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS_2 = [
 export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES_1 = [
   "public transit access", "public transportation", "transportation", "public option",
   "healthcare access", "universal healthcare", "medicare for all", "medicare expansion",
-  "expanding medicare", "single payer healthcare", "medicare", "dignity in retirement",
+  "expanding medicare", "single payer healthcare", "medicare", "medicaid", "dignity in retirement",
   "free public college", "tuition free college", "public broadband", "childcare",
   "universal childcare", "paid family leave", "paid sick leave", "public housing"
 ];
@@ -86,7 +86,7 @@ export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES_2 = [
 ];
 
 export const PROGRESSIVE_KEYWORDS_PERSONALITIES = [
-  "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "zohran", "mamdani", "dsa"
+  "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "zohran", "mamdani"
 ];
 
 // Aggregate all keyword groups into one array for looping in bot.ts
