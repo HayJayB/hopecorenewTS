@@ -76,25 +76,24 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer = await response.buffer();
 
-  // Detect mime type from extension or fallback to jpeg
-  let mimeType = "image/jpeg";
-  if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
-  else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
+  // Detect encoding from extension or fallback to jpeg
+  let encoding = "image/jpeg";
+  if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
+  else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
+  // Pass only encoding option, no mimeType
   const blobRef = await agent.api.uploadBlob(buffer, {
-    encoding: mimeType,
-    mimeType,
+    encoding,
   });
 
-  // Return the string ref, NOT the whole BlobRef object
-  return blobRef.ref;
+  return blobRef; // string blob ref
 }
 
 async function postToBluesky(
