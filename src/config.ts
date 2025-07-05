@@ -6,27 +6,9 @@ export const MAX_POSTED_LINKS = 63;
 export const MAX_DAYS_OLD = 14;
 export const POSITIVE_THRESHOLD = 0.75;
 
- //export const RSS_FEEDS = [
-  //"https://jacobin.com/feed",
-  //"https://www.dsausa.org/feed/",
-  //"https://www.thenation.com/feed/?post_type=article",
-  //"https://inthesetimes.com/rss",
-  //"https://www.commondreams.org/rss.xml",
-  //"https://truthout.org/feed/",
-  //"https://progressive.org/feed/",
-  //"https://theintercept.com/feed/",
-  //"https://commonwealthclub.org/feed/podcast",
-  //"https://www.theguardian.com/us-news/us-politics/rss",
-  //"https://www.truthdig.com/feed/",
-  //"https://www.counterpunch.org/feed/",
-  //"https://www.democracynow.org/democracynow.rss",
-  //"https://therealnews.com/feed/",
-  //"https://labornotes.org/rss.xml",
-  //"https://shadowproof.com/feed/",
-  //"https://popularresistance.org/feed/",
-  //"https://wagingnonviolence.org/feed/",
-  //"https://www.leftvoice.org/feed/",
-//];
+// File paths for storing posted and recent keywords
+export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
+export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
 
 export const POSITIVE_KEYWORDS = [
   "win", "victory", "gains", "success", "growth", "solidarity", "organize", "strike",
@@ -44,7 +26,8 @@ export const NEGATIVE_KEYWORDS = [
   "conflict", "lawsuit", "charges", "indicted", "pleads guilty"
 ];
 
-export const PROGRESSIVE_KEYWORDS_SOCIAL = [
+// Keyword groups split by topic for finer control
+export const SOCIAL_JUSTICE_KEYWORDS = [
   "progressive", "progressivism", "socialism", "socialist", "left wing", "left-wing", "leftist",
   "social justice", "equity", "fair wages", "income inequality", "income redistribution", "wealth inequality",
   "wealth tax", "progressive taxation", "anti-capitalism", "corporate accountability", "campaign finance reform",
@@ -53,7 +36,7 @@ export const PROGRESSIVE_KEYWORDS_SOCIAL = [
   "community land trust", "public ownership", "public investment"
 ];
 
-export const PROGRESSIVE_KEYWORDS_LABOR = [
+export const LABOR_HOUSING_KEYWORDS = [
   "labor rights", "union", "unionization", "right to strike", "collective bargaining", "worker rights",
   "workers' rights", "workers bill of rights", "labor movement", "gig economy", "living wage", "living wage jobs",
   "minimum wage", "tenant union", "tenant rights", "tenant protections", "good cause eviction", "cancel rent",
@@ -62,17 +45,23 @@ export const PROGRESSIVE_KEYWORDS_LABOR = [
   "build public housing", "community control", "NYCHA funding", "stop gentrification", "social housing",
   "cancel student debt", "abolish student debt", "student debt", "tuition free college", "free public college",
   "public education", "universal pre-k", "public broadband", "childcare", "universal childcare", "paid family leave",
-  "paid sick leave", "living wage", "right to strike"
+  "paid sick leave", "right to strike"
 ];
 
-export const PROGRESSIVE_KEYWORDS_ENVIRONMENT = [
+export const ECONOMIC_POLICIES_KEYWORDS = [
+  // Economic policies keywords can be added here if needed,
+  // as you had no separate list for them in this snippet,
+  // or merge relevant ones from others if applicable.
+];
+
+export const CLIMATE_ENVIRONMENT_KEYWORDS = [
   "climate justice", "environmental justice", "climate action", "green new deal", "green jobs", "climate jobs",
   "climate resilience", "pollution reduction", "fossil fuel divestment", "renewable energy", "green infrastructure",
   "decarbonization", "net zero emissions", "decarbonize economy", "zero emissions", "green transition",
   "environmental racism", "youth climate movement"
 ];
 
-export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS = [
+export const CIVIL_RIGHTS_KEYWORDS = [
   "black lives matter", "lgbtq rights", "trans rights", "transgender", "gender equality", "gay", "civil rights",
   "gender pay gap", "inclusivity", "racial disparities", "racial justice", "racial equity", "racial wealth gap",
   "racial solidarity", "racial justice organizing", "prison reform", "mass incarceration", "end mass incarceration",
@@ -81,7 +70,7 @@ export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS = [
   "reproductive rights"
 ];
 
-export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES = [
+export const PUBLIC_SERVICES_KEYWORDS = [
   "public transit access", "public transportation", "transportation", "public option", "healthcare access",
   "universal healthcare", "medicare for all", "medicare expansion", "expanding medicare", "single payer healthcare",
   "medicare", "dignity in retirement", "free public college", "tuition free college", "public broadband",
@@ -89,13 +78,16 @@ export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES = [
   "universal pre-k"
 ];
 
-export const PROGRESSIVE_KEYWORDS_PERSONALITIES = [
+export const PERSONALITIES_KEYWORDS = [
   "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "zohran", "mamdani", "dsa"
 ];
 
+// Collect all keyword groups to iterate over in bot.ts
 export const ALL_KEYWORD_GROUPS = [
   SOCIAL_JUSTICE_KEYWORDS,
   LABOR_HOUSING_KEYWORDS,
-  ECONOMIC_POLICIES_KEYWORDS,
+  CIVIL_RIGHTS_KEYWORDS,
+  PUBLIC_SERVICES_KEYWORDS,
   CLIMATE_ENVIRONMENT_KEYWORDS,
+  PERSONALITIES_KEYWORDS,
 ];
