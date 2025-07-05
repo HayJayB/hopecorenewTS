@@ -76,31 +76,22 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer = await response.buffer();
 
+  // Detect mime type from extension or fallback to jpeg
   let mimeType = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
 
-  // Upload the blob and extract the blob ref string properly
-  const uploadResponse = await agent.api.uploadBlob(buffer, {
-    encoding: mimeType, // or contentType: mimeType, check your library version
+  const blobRef = await agent.api.uploadBlob(buffer, {
+    encoding: mimeType,
+    mimeType,
   });
-
-  // Extract blob ref string — adapt as needed based on your API version
-  const blobRef =
-    (uploadResponse as any).data?.blob ??
-    (uploadResponse as any).blob ??
-    uploadResponse;
-
-  if (typeof blobRef !== "string") {
-    throw new Error("Unexpected uploadBlob response format");
-  }
 
   return blobRef;
 }
@@ -131,22 +122,28 @@ async function postToBluesky(
     }
   }
 
+  // Compose embed only if blobRef is present
+  const embed = blobRef
+    ? {
+        $type: "app.bsky.embed.external",
+        external: {
+          uri: url,
+          title,
+          ...(description ? { description } : {}),
+          thumb: blobRef,
+        },
+      }
+    : undefined;
+
   const postInput: any = {
     text: title,
     createdAt: new Date().toISOString(),
   };
 
-  if (blobRef) {
-    postInput.embed = {
-      $type: "app.bsky.embed.external",
-      external: {
-        uri: url,
-        title,
-        description: description || "",
-        thumb: blobRef,
-      },
-    };
+  if (embed) {
+    postInput.embed = embed;
   } else {
+    // fallback: add url in text for clickable link fallback
     postInput.text += `\n\n${url}`;
   }
 
@@ -194,8 +191,11 @@ async function main() {
     if (imgMatch) imageUrl = imgMatch[1];
   }
 
+  // Optional: You can extract a brief description if needed here
+  const description = undefined; // Or parse from chosen.entry.contentSnippet or similar
+
   try {
-    await postToBluesky(title, url, imageUrl);
+    await postToBluesky(title, url, imageUrl, description);
 
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
