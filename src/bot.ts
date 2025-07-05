@@ -66,9 +66,6 @@ async function fetchRecentPositiveHeadlines(): Promise<
     sentiments.push(result);
   }
 
-  // Lowered threshold for debugging - change back after testing
-  const DEBUG_POSITIVE_THRESHOLD = 0.6;
-
   return articles
     .map((entry, i) => ({ entry, sentiment: sentiments[i] }))
     .filter(({ entry, sentiment }) => {
@@ -79,17 +76,13 @@ async function fetchRecentPositiveHeadlines(): Promise<
 
       const label = sentiment.label.toUpperCase();
 
-      console.log(`Title: ${entry.title}`);
-      console.log(`Sentiment Label: ${sentiment.label}, Score: ${sentiment.score}`);
-
       if (label !== "POSITIVE" && label !== "LABEL_1") return false;
-      if (sentiment.score < DEBUG_POSITIVE_THRESHOLD) return false;
+
+      if (sentiment.score < POSITIVE_THRESHOLD) return false;
 
       const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
         entry.title!.toLowerCase().includes(k)
       );
-
-      console.log(`Keywords in title: ${keywordsInTitle.join(", ")}`);
 
       if (keywordsInTitle.length === 0) return false;
 
