@@ -189,7 +189,7 @@ async function main() {
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
 
     recentKeywords.push(...chosen.keywords);
-    await saveListToFile(recentKeywords.slice(-20), RECENT_KEYWORDS_FILE);
+    await saveListToFile(recentKeywords.slice(-4), RECENT_KEYWORDS_FILE);
 
     console.log("Successfully posted:", title);
   } catch (err) {
