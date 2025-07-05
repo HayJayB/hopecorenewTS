@@ -82,13 +82,13 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<st
   }
   const buffer: Buffer = await response.buffer();
 
-  // Correct option is 'encoding' with mime type string
+  // Determine encoding (mime type)
   let encoding = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
-  // uploadBlob returns a string blobRef directly
-  const blobRef = await agent.api.uploadBlob(buffer, { encoding });
+  // uploadBlob returns the blobRef string directly
+  const blobRef: string = await agent.api.uploadBlob(buffer, { encoding });
 
   return blobRef;
 }
