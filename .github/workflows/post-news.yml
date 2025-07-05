@@ -9,6 +9,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          persist-credentials: false  # <-- Important: disable auto credentials
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
