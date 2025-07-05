@@ -35,11 +35,9 @@ export function adjustedSentiment(text: string, negativeKeywords: string[]): num
 }
 
 /**
- * Analyze sentiment for a batch of texts using Hugging Face Transformers
+ * Analyze sentiment for a single text using Hugging Face Transformers
  */
-export async function analyzeSentiment(texts: string[]): Promise<
-  { label: string; score: number }[]
-> {
+export async function analyzeSentiment(text: string): Promise<{ label: string; score: number }> {
   if (!HF_API_TOKEN) {
     throw new Error("HF_API_TOKEN is not set in .env");
   }
@@ -50,7 +48,7 @@ export async function analyzeSentiment(texts: string[]): Promise<
       Authorization: `Bearer ${HF_API_TOKEN}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ inputs: texts }),
+    body: JSON.stringify({ inputs: text }),
   });
 
   if (!response.ok) {
@@ -60,31 +58,26 @@ export async function analyzeSentiment(texts: string[]): Promise<
   const json = await response.json();
   console.log("Hugging Face raw response:", JSON.stringify(json, null, 2));
 
-  // Handle error responses
   if (json.error) {
     throw new Error(`Hugging Face API returned error: ${json.error}`);
   }
 
-  // Determine format:
-  // Batch shape: Array of Arrays
-  // Single shape: Array of objects
-  const resultsArray = Array.isArray(json[0]) ? json : [json];
+  const resultArray = Array.isArray(json) ? json : [json];
+  const result = resultArray[0];
 
-  return resultsArray.map((result: any) => {
-    if (!Array.isArray(result) || result.length === 0) {
-      throw new Error(`Unexpected Hugging Face result format: ${JSON.stringify(result)}`);
-    }
+  if (!Array.isArray(result) || result.length === 0) {
+    throw new Error(`Unexpected Hugging Face result format: ${JSON.stringify(result)}`);
+  }
 
-    const best = result.reduce(
-      (max: any, curr: any) => (curr.score > max.score ? curr : max),
-      result[0]
-    );
+  const best = result.reduce(
+    (max: any, curr: any) => (curr.score > max.score ? curr : max),
+    result[0]
+  );
 
-    return {
-      label: best.label,
-      score: best.score,
-    };
-  });
+  return {
+    label: best.label,
+    score: best.score,
+  };
 }
 
 /**
