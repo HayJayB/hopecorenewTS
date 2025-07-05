@@ -1,8 +1,9 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
+import path from "path";
 import Parser from "rss-parser";
-import fetch from "node-fetch";
+import fetch from "node-fetch"; // node-fetch v2
 import {
   loadListFromFile,
   saveListToFile,
@@ -11,7 +12,6 @@ import {
 } from "./utils";
 
 import { BskyAgent } from "@atproto/api";
-import type { BlobRef } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -76,7 +76,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
     }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<BlobRef> {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
@@ -87,8 +87,8 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<Bl
   if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
-  const uploadResult = await agent.api.uploadBlob(buffer, { encoding });
-  return uploadResult.data.blob;
+  const blobRef = await agent.api.uploadBlob(buffer, { encoding });
+  return blobRef;
 }
 
 async function postToBluesky(
@@ -108,7 +108,7 @@ async function postToBluesky(
 
   await agent.login({ identifier: handle, password: appPassword });
 
-  let blobRef: BlobRef | undefined;
+  let blobRef: string | undefined;
   if (imageUrl) {
     try {
       blobRef = await uploadImageAsBlob(agent, imageUrl);
@@ -142,10 +142,17 @@ async function postToBluesky(
 }
 
 async function main() {
+  console.log("POSTED_LINKS_FILE path:", path.resolve(POSTED_LINKS_FILE));
+  console.log("RECENT_KEYWORDS_FILE path:", path.resolve(RECENT_KEYWORDS_FILE));
+
   const postedLinks = await loadListFromFile(POSTED_LINKS_FILE);
+  console.log("Loaded postedLinks:", postedLinks);
+
   const recentKeywords = await loadListFromFile(RECENT_KEYWORDS_FILE);
+  console.log("Loaded recentKeywords:", recentKeywords);
 
   const positiveArticles = await fetchRecentPositiveHeadlines();
+  console.log(`Number of positive articles fetched: ${positiveArticles.length}`);
 
   const candidates = positiveArticles.filter(({ entry, keywords }) => {
     const normalizedTitle = normalizeTitle(entry.title!);
@@ -157,6 +164,8 @@ async function main() {
 
     return true;
   });
+
+  console.log(`Candidates after filtering: ${candidates.length}`);
 
   if (candidates.length === 0) {
     console.log("No new positive articles found to post.");
@@ -181,15 +190,16 @@ async function main() {
 
   try {
     await postToBluesky(title, url, imageUrl);
-    console.log("POSTED_LINKS_FILE path:", POSTED_LINKS_FILE);
-    console.log("RECENT_KEYWORDS_FILE path:", RECENT_KEYWORDS_FILE);
-    console.log("Current working directory:", process.cwd());
 
+    console.log("Adding to postedLinks:", normalizeTitle(chosen.entry.title!));
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
+    console.log("Saved postedLinks");
 
+    console.log("Adding to recentKeywords:", chosen.keywords);
     recentKeywords.push(...chosen.keywords);
     await saveListToFile(recentKeywords.slice(-20), RECENT_KEYWORDS_FILE);
+    console.log("Saved recentKeywords");
 
     console.log("Successfully posted:", title);
   } catch (err) {
