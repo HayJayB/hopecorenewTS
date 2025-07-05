@@ -26,7 +26,7 @@ export const POSITIVE_THRESHOLD = 0.85;
   //"https://popularresistance.org/feed/",
   //"https://wagingnonviolence.org/feed/",
   //"https://www.leftvoice.org/feed/",
-];
+//];
 
 export const POSITIVE_KEYWORDS = [
   "win", "victory", "gains", "success", "growth", "solidarity", "organize", "strike",
