@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import Parser from "rss-parser";
-import fetch from "node-fetch"; // node-fetch v2
+import fetch from "node-fetch";
 import {
   loadListFromFile,
   saveListToFile,
@@ -11,6 +11,7 @@ import {
 } from "./utils";
 
 import { BskyAgent } from "@atproto/api";
+import type { BlobRef } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -75,7 +76,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
     }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<BlobRef> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
@@ -86,10 +87,8 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<st
   if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
-  // uploadBlob returns an object with .data.blob.$link
   const uploadResult = await agent.api.uploadBlob(buffer, { encoding });
-
-  return uploadResult.data.blob.$link;
+  return uploadResult.data.blob;
 }
 
 async function postToBluesky(
@@ -109,7 +108,7 @@ async function postToBluesky(
 
   await agent.login({ identifier: handle, password: appPassword });
 
-  let blobRef: string | undefined;
+  let blobRef: BlobRef | undefined;
   if (imageUrl) {
     try {
       blobRef = await uploadImageAsBlob(agent, imageUrl);
@@ -172,8 +171,7 @@ async function main() {
 
   const url = chosen.entry.link!;
 
-  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
-  let imageUrl: string | undefined = undefined;
+  let imageUrl: string | undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
   } else if (chosen.entry.content) {
