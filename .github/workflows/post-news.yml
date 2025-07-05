@@ -1,4 +1,4 @@
-name: Run Bluesky Positive News Bot
+name: Run Bot
 
 on:
   workflow_dispatch:
@@ -8,41 +8,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Clean workspace
-        run: rm -rf dist node_modules
-
       - name: Install dependencies
         run: npm install
 
-      - name: Build project
+      - name: Build
         run: npm run build
 
-      - name: Run bot script
+      - name: Run Bot
         run: node dist/bot.js
-        env:
-          BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
-          BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
 
-      - name: Configure Git for Push
+      - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
 
-      - name: Commit updated txt files
+      - name: Commit changes
         run: |
           git add posted_links.txt recent_keywords.txt
-          if ! git diff --cached --quiet; then
-            git commit -m "Update posted links and recent keywords [skip ci]"
-            git push origin HEAD:${{ github.ref }}
-          else
-            echo "No changes to commit"
-          fi
+          git commit -m "Update posted links and recent keywords [skip ci]" || echo "No changes to commit"
+
+      - name: Push changes
+        env:
+          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/${{ github.repository }}.git
+          git push origin HEAD:${{ github.ref_name }}
