@@ -1,11 +1,6 @@
 import path from "path";
-import { fileURLToPath } from "url";
 
-// Get directory of this file (config.ts)
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// Assume your project root is one level up from src folder where config.ts lives
-const rootDir = path.resolve(__dirname, "..");
+const rootDir = process.cwd();
 
 export const MAX_POSTED_LINKS = 50;
 export const MAX_DAYS_OLD = 14;
@@ -48,6 +43,5 @@ export const NEGATIVE_KEYWORDS = [
   "destroy", "raiding", "raid", "gut", "fear", "broken", "destruction",
 ];
 
-// Use absolute paths so file I/O is consistent
 export const POSTED_LINKS_FILE = path.join(rootDir, "data/posted_links.txt");
 export const RECENT_KEYWORDS_FILE = path.join(rootDir, "data/recent_keywords.txt");
