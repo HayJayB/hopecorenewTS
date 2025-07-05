@@ -33,7 +33,7 @@ export const POSITIVE_KEYWORDS = [
   "socialist", "left wing", "union", "responsibility", "mobilize", "charity",
   "outreach", "resistance", "community", "truth", "celebrate", "local", "save",
   "future", "knock", "knocks", "healing", "hope", "love", "progressive", "champion",
-  "leader", "ceasefire",
+  "leader", "empower", "support", "uplift", "transform", "advances", "improves", "breakthrough"
 ];
 
 export const NEGATIVE_KEYWORDS = [
@@ -41,6 +41,7 @@ export const NEGATIVE_KEYWORDS = [
   "disaster", "scandal", "accident", "injured", "tragedy", "fraud", "collapse",
   "bomb", "shooting", "war", "loser", "awful", "horrible", "terrible", "tragic",
   "destroy", "raiding", "raid", "gut", "fear", "broken", "destruction",
+  "conflict", "lawsuit", "charges", "indicted", "pleads guilty"
 ];
 
 export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
