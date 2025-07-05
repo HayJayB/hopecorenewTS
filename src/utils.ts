@@ -59,7 +59,7 @@ export async function analyzeSentiment(texts: string[]): Promise<
 
   const json = await response.json();
 
-  // If input was a single string, wrap it in array for consistency
+  // If single text was passed, wrap in array for consistency
   const resultsArray = Array.isArray(json[0]) ? json : [json];
 
   return resultsArray.map((result: any) => {
@@ -75,7 +75,6 @@ export async function analyzeSentiment(texts: string[]): Promise<
     };
   });
 }
-
 
 /**
  * Load lines from a file, ignoring empty lines
