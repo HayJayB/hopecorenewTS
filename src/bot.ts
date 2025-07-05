@@ -42,7 +42,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
 
   const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
     POSITIVE_KEYWORDS.join(" OR ")
-  )}&language=en&sortBy=publishedAt&pageSize=50&apiKey=${apiKey}`;
+  )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
 
   const response = await fetch(url);
   if (!response.ok) {
