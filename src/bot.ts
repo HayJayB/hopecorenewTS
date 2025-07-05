@@ -74,7 +74,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
       const pubDate = new Date(entry.publishedAt);
       if (pubDate < cutoffDate) return false;
 
-      if (sentiment.label !== "POSITIVE") return false;
+      if (sentiment.label !== "POSITIVE" && sentiment.label !== "LABEL_1") return false;
       if (sentiment.score < POSITIVE_THRESHOLD) return false;
 
       const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
