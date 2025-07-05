@@ -81,15 +81,16 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<st
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
-  const buffer: Buffer = await response.buffer(); // explicit Buffer typing for node-fetch v2
+  const buffer: Buffer = await response.buffer();
 
   // Detect mime type by file extension fallback to jpeg
   let mimeType = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
 
-  const blobRef = await agent.api.uploadBlob(buffer, {
-    encoding: mimeType,
+  // Correct option name: mimeType instead of encoding
+  const blobRef: string = await agent.api.uploadBlob(buffer, {
+    mimeType,
   });
 
   return blobRef;
