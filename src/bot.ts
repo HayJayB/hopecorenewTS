@@ -15,8 +15,7 @@ import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
   POSITIVE_THRESHOLD,
-  POSITIVE_KEYWORDS,
-  NEGATIVE_KEYWORDS,
+  PROGRESSIVE_KEYWORDS,
   POSTED_LINKS_FILE,
   RECENT_KEYWORDS_FILE,
 } from "./config";
@@ -30,9 +29,9 @@ interface Article {
 }
 
 /**
- * Fetch recent positive headlines from NewsAPI with Hugging Face sentiment
+ * Fetch recent headlines from NewsAPI with Hugging Face sentiment and progressive keywords filter
  */
-async function fetchRecentPositiveHeadlines(): Promise<
+async function fetchRecentProgressiveHeadlines(): Promise<
   { entry: Article; keywords: string[] }[]
 > {
   const apiKey = process.env.NEWSAPI_KEY;
@@ -41,7 +40,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }
 
   const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-    POSITIVE_KEYWORDS.join(" OR ")
+    PROGRESSIVE_KEYWORDS.join(" OR ")
   )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
 
   const response = await fetch(url);
@@ -60,11 +59,10 @@ async function fetchRecentPositiveHeadlines(): Promise<
     .filter((entry) => entry.title)
     .map((entry) => entry.title!);
 
-  const sentiments: { label: string; score: number }[] = [];
-  for (const title of titles) {
-    const result = await analyzeSentiment(title);
-    sentiments.push(result);
-  }
+  // Analyze sentiment concurrently for speed
+  const sentiments = await Promise.all(
+    titles.map((title) => analyzeSentiment(title))
+  );
 
   return articles
     .map((entry, i) => ({ entry, sentiment: sentiments[i] }))
@@ -74,23 +72,25 @@ async function fetchRecentPositiveHeadlines(): Promise<
       const pubDate = new Date(entry.publishedAt);
       if (pubDate < cutoffDate) return false;
 
-      const label = sentiment.label.toUpperCase();
-
-      if (label !== "POSITIVE" && label !== "LABEL_1") return false;
+      if (
+        sentiment.label !== "POSITIVE" &&
+        sentiment.label !== "LABEL_1"
+      )
+        return false;
 
       if (sentiment.score < POSITIVE_THRESHOLD) return false;
 
-      const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
+      // Check if the article title contains any of the progressive keywords
+      const keywordsInTitle = PROGRESSIVE_KEYWORDS.filter((k) =>
         entry.title!.toLowerCase().includes(k)
       );
-
       if (keywordsInTitle.length === 0) return false;
 
       return true;
     })
     .map(({ entry }) => ({
       entry,
-      keywords: POSITIVE_KEYWORDS.filter((k) =>
+      keywords: PROGRESSIVE_KEYWORDS.filter((k) =>
         entry.title!.toLowerCase().includes(k)
       ),
     }));
@@ -170,9 +170,9 @@ async function main() {
   const postedLinks = await loadListFromFile(POSTED_LINKS_FILE);
   const recentKeywords = await loadListFromFile(RECENT_KEYWORDS_FILE);
 
-  const positiveArticles = await fetchRecentPositiveHeadlines();
+  const progressiveArticles = await fetchRecentProgressiveHeadlines();
 
-  const candidates = positiveArticles.filter(({ entry, keywords }) => {
+  const candidates = progressiveArticles.filter(({ entry, keywords }) => {
     const normalizedTitle = normalizeTitle(entry.title!);
     if (postedLinks.includes(normalizedTitle)) return false;
 
@@ -184,7 +184,7 @@ async function main() {
   });
 
   if (candidates.length === 0) {
-    console.log("No new positive articles found to post.");
+    console.log("No new progressive articles found to post.");
     return;
   }
 
