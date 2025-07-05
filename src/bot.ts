@@ -181,6 +181,9 @@ async function main() {
 
   try {
     await postToBluesky(title, url, imageUrl);
+    console.log("POSTED_LINKS_FILE path:", POSTED_LINKS_FILE);
+    console.log("RECENT_KEYWORDS_FILE path:", RECENT_KEYWORDS_FILE);
+    console.log("Current working directory:", process.cwd());
 
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
