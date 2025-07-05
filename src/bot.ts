@@ -57,14 +57,14 @@ async function fetchRecentPositiveHeadlines(): Promise<
 
   // Extract titles for sentiment
   const titles = articles
-    .filter(entry => entry.title)
-    .map(entry => entry.title!);
+    .filter((entry) => entry.title)
+    .map((entry) => entry.title!);
 
-  const sentiments = [];
+  const sentiments: { label: string; score: number }[] = [];
   for (const title of titles) {
     const result = await analyzeSentiment(title);
     sentiments.push(result);
-}
+  }
 
   return articles
     .map((entry, i) => ({ entry, sentiment: sentiments[i] }))
@@ -77,7 +77,7 @@ async function fetchRecentPositiveHeadlines(): Promise<
       if (sentiment.label !== "POSITIVE") return false;
       if (sentiment.score < POSITIVE_THRESHOLD) return false;
 
-      const keywordsInTitle = POSITIVE_KEYWORDS.filter(k =>
+      const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
         entry.title!.toLowerCase().includes(k)
       );
       if (keywordsInTitle.length === 0) return false;
@@ -86,16 +86,21 @@ async function fetchRecentPositiveHeadlines(): Promise<
     })
     .map(({ entry }) => ({
       entry,
-      keywords: POSITIVE_KEYWORDS.filter(k =>
+      keywords: POSITIVE_KEYWORDS.filter((k) =>
         entry.title!.toLowerCase().includes(k)
       ),
     }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<BlobRef> {
+async function uploadImageAsBlob(
+  agent: BskyAgent,
+  imageUrl: string
+): Promise<BlobRef> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
-    throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch image for blob upload: ${response.statusText}`
+    );
   }
   const buffer: Buffer = await response.buffer();
 
