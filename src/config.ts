@@ -43,5 +43,5 @@ export const NEGATIVE_KEYWORDS = [
   "destroy", "raiding", "raid", "gut", "fear", "broken", "destruction",
 ];
 
-export const POSTED_LINKS_FILE = "posted_links.txt";
-export const RECENT_KEYWORDS_FILE = "recent_keywords.txt";
+export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
+export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
