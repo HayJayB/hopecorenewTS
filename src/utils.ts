@@ -74,8 +74,14 @@ export async function analyzeSentiment(text: string): Promise<{ label: string; s
     result[0]
   );
 
+  const LABEL_MAP: Record<string, string> = {
+    LABEL_0: "NEGATIVE",
+    LABEL_1: "POSITIVE",
+    LABEL_2: "NEUTRAL",
+  };
+
   return {
-    label: best.label,
+    label: LABEL_MAP[best.label] || best.label,
     score: best.score,
   };
 }
