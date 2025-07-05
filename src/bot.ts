@@ -23,6 +23,19 @@ import {
   RECENT_KEYWORDS_FILE,
 } from "./config";
 
+// Helper: strip HTML tags & decode entities
+function cleanHtmlToText(html: string): string {
+  // Remove tags
+  let text = html.replace(/<\/?[^>]+(>|$)/g, "");
+  // Decode common HTML entities (basic)
+  text = text.replace(/&nbsp;/g, " ");
+  text = text.replace(/&amp;/g, "&");
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&lt;/g, "<");
+  text = text.replace(/&gt;/g, ">");
+  return text.trim();
+}
+
 const parser = new Parser();
 
 interface FeedEntry {
@@ -30,7 +43,9 @@ interface FeedEntry {
   link?: string;
   pubDate?: string;
   content?: string;
+  contentSnippet?: string;
   enclosure?: { url?: string };
+  description?: string;
   [key: string]: any;
 }
 
@@ -83,7 +98,7 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
   }
   const buffer = await response.buffer();
 
-  // Detect mime type from extension or fallback to jpeg
+  // Determine mime type based on file extension or fallback to jpeg
   let mimeType = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
@@ -93,7 +108,7 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
     mimeType,
   });
 
-  return blobRef;
+  return blobRef.ref; // Access the string ref property here
 }
 
 async function postToBluesky(
@@ -122,28 +137,22 @@ async function postToBluesky(
     }
   }
 
-  // Compose embed only if blobRef is present
-  const embed = blobRef
-    ? {
-        $type: "app.bsky.embed.external",
-        external: {
-          uri: url,
-          title,
-          ...(description ? { description } : {}),
-          thumb: blobRef,
-        },
-      }
-    : undefined;
-
   const postInput: any = {
     text: title,
     createdAt: new Date().toISOString(),
   };
 
-  if (embed) {
-    postInput.embed = embed;
+  if (blobRef) {
+    postInput.embed = {
+      $type: "app.bsky.embed.external",
+      external: {
+        uri: url,
+        title,
+        description: description || "",
+        thumb: blobRef,
+      },
+    };
   } else {
-    // fallback: add url in text for clickable link fallback
     postInput.text += `\n\n${url}`;
   }
 
@@ -191,8 +200,20 @@ async function main() {
     if (imgMatch) imageUrl = imgMatch[1];
   }
 
-  // Optional: You can extract a brief description if needed here
-  const description = undefined; // Or parse from chosen.entry.contentSnippet or similar
+  // Extract and clean description
+  let description = "";
+  if (chosen.entry.contentSnippet) {
+    description = cleanHtmlToText(chosen.entry.contentSnippet);
+  } else if (chosen.entry.description) {
+    description = cleanHtmlToText(chosen.entry.description);
+  } else if (chosen.entry.content) {
+    description = cleanHtmlToText(chosen.entry.content);
+  }
+
+  // Limit description length to ~250 characters for neatness
+  if (description.length > 250) {
+    description = description.slice(0, 247) + "...";
+  }
 
   try {
     await postToBluesky(title, url, imageUrl, description);
