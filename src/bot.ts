@@ -60,7 +60,11 @@ async function fetchRecentPositiveHeadlines(): Promise<
     .filter(entry => entry.title)
     .map(entry => entry.title!);
 
-  const sentiments = await analyzeSentiment(titles);
+  const sentiments = [];
+  for (const headline of headlines) {
+    const result = await analyzeSentiment(headline);
+    sentiments.push(result);
+}
 
   return articles
     .map((entry, i) => ({ entry, sentiment: sentiments[i] }))
