@@ -25,9 +25,7 @@ import {
 
 // Helper: strip HTML tags & decode entities
 function cleanHtmlToText(html: string): string {
-  // Remove tags
   let text = html.replace(/<\/?[^>]+(>|$)/g, "");
-  // Decode common HTML entities (basic)
   text = text.replace(/&nbsp;/g, " ");
   text = text.replace(/&amp;/g, "&");
   text = text.replace(/&quot;/g, '"');
@@ -98,17 +96,15 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
   }
   const buffer = await response.buffer();
 
-  // Determine mime type based on file extension or fallback to jpeg
   let mimeType = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
 
   const blobRef = await agent.api.uploadBlob(buffer, {
     encoding: mimeType,
-    mimeType,
   });
 
-  return blobRef.ref; // Access the string ref property here
+  return blobRef;
 }
 
 async function postToBluesky(
@@ -191,7 +187,6 @@ async function main() {
 
   const url = chosen.entry.link!;
 
-  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
   let imageUrl: string | undefined = undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
@@ -200,7 +195,6 @@ async function main() {
     if (imgMatch) imageUrl = imgMatch[1];
   }
 
-  // Extract and clean description
   let description = "";
   if (chosen.entry.contentSnippet) {
     description = cleanHtmlToText(chosen.entry.contentSnippet);
@@ -210,7 +204,6 @@ async function main() {
     description = cleanHtmlToText(chosen.entry.content);
   }
 
-  // Limit description length to ~250 characters for neatness
   if (description.length > 250) {
     description = description.slice(0, 247) + "...";
   }
