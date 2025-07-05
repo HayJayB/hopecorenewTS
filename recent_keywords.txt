@@ -2,3 +2,4 @@ win
 truth
 victory
 resistance
+strike
