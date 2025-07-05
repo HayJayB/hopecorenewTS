@@ -82,15 +82,14 @@ async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<st
   }
   const buffer: Buffer = await response.buffer();
 
-  // Determine encoding (mime type)
   let encoding = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
-  // uploadBlob returns the blobRef string directly
-  const blobRef: string = await agent.api.uploadBlob(buffer, { encoding });
+  // uploadBlob returns an object with .data.blob.$link
+  const uploadResult = await agent.api.uploadBlob(buffer, { encoding });
 
-  return blobRef;
+  return uploadResult.data.blob.$link;
 }
 
 async function postToBluesky(
@@ -173,8 +172,8 @@ async function main() {
 
   const url = chosen.entry.link!;
 
-  // Get image URL from RSS enclosure or content img tag
-  let imageUrl: string | undefined;
+  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
+  let imageUrl: string | undefined = undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
   } else if (chosen.entry.content) {
