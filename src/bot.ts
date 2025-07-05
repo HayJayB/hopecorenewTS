@@ -11,11 +11,12 @@ import {
 
 import { BskyAgent } from "@atproto/api";
 import type { BlobRef } from "@atproto/api";
+
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
   POSITIVE_THRESHOLD,
-  PROGRESSIVE_KEYWORDS,
+  ALL_KEYWORD_GROUPS, // Make sure you export this array of keyword groups from config
   POSTED_LINKS_FILE,
   RECENT_KEYWORDS_FILE,
 } from "./config";
@@ -29,7 +30,7 @@ interface Article {
 }
 
 /**
- * Fetch recent headlines from NewsAPI with Hugging Face sentiment and progressive keywords filter
+ * Fetch recent headlines from NewsAPI for multiple keyword groups with sentiment filtering
  */
 async function fetchRecentProgressiveHeadlines(): Promise<
   { entry: Article; keywords: string[] }[]
@@ -39,61 +40,76 @@ async function fetchRecentProgressiveHeadlines(): Promise<
     throw new Error("NEWSAPI_KEY is not set in .env");
   }
 
-  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-    PROGRESSIVE_KEYWORDS.join(" OR ")
-  )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
-
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`NewsAPI request failed: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const articles: Article[] = data.articles;
+  let combinedArticles: { entry: Article; keywords: string[] }[] = [];
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-  // Extract titles for sentiment
-  const titles = articles
-    .filter((entry) => entry.title)
-    .map((entry) => entry.title!);
+  // Loop through each keyword group and fetch articles
+  for (const keywordGroup of ALL_KEYWORD_GROUPS) {
+    const query = keywordGroup.join(" OR ");
+    const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+      query
+    )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
 
-  // Analyze sentiment concurrently for speed
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.warn(
+          `NewsAPI request failed for keywords: ${query} - ${response.statusText}`
+        );
+        continue; // Skip this group and continue with next
+      }
+
+      const data = await response.json();
+      const articles: Article[] = data.articles;
+
+      // Filter articles by date and required fields
+      const filtered = articles
+        .filter(
+          (a) =>
+            a.title &&
+            a.url &&
+            a.publishedAt &&
+            new Date(a.publishedAt) >= cutoffDate
+        )
+        .map((a) => ({
+          entry: a,
+          keywords: keywordGroup,
+        }));
+
+      combinedArticles.push(...filtered);
+    } catch (error) {
+      console.warn(`Error fetching articles for keywords: ${query}`, error);
+      continue;
+    }
+  }
+
+  // Deduplicate by normalized title
+  const uniqueArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
+  for (const item of combinedArticles) {
+    const normTitle = normalizeTitle(item.entry.title!);
+    if (!uniqueArticlesMap.has(normTitle)) {
+      uniqueArticlesMap.set(normTitle, item);
+    }
+  }
+  const uniqueArticles = Array.from(uniqueArticlesMap.values());
+
+  // Perform sentiment analysis concurrently
   const sentiments = await Promise.all(
-    titles.map((title) => analyzeSentiment(title))
+    uniqueArticles.map(({ entry }) => analyzeSentiment(entry.title!))
   );
 
-  return articles
-    .map((entry, i) => ({ entry, sentiment: sentiments[i] }))
-    .filter(({ entry, sentiment }) => {
-      if (!entry.title || !entry.url || !entry.publishedAt) return false;
+  // Filter by sentiment and threshold
+  const positiveArticles = uniqueArticles
+    .map(({ entry, keywords }, i) => ({ entry, keywords, sentiment: sentiments[i] }))
+    .filter(
+      ({ sentiment }) =>
+        (sentiment.label === "POSITIVE" || sentiment.label === "LABEL_1") &&
+        sentiment.score >= POSITIVE_THRESHOLD
+    );
 
-      const pubDate = new Date(entry.publishedAt);
-      if (pubDate < cutoffDate) return false;
-
-      if (
-        sentiment.label !== "POSITIVE" &&
-        sentiment.label !== "LABEL_1"
-      )
-        return false;
-
-      if (sentiment.score < POSITIVE_THRESHOLD) return false;
-
-      // Check if the article title contains any of the progressive keywords
-      const keywordsInTitle = PROGRESSIVE_KEYWORDS.filter((k) =>
-        entry.title!.toLowerCase().includes(k)
-      );
-      if (keywordsInTitle.length === 0) return false;
-
-      return true;
-    })
-    .map(({ entry }) => ({
-      entry,
-      keywords: PROGRESSIVE_KEYWORDS.filter((k) =>
-        entry.title!.toLowerCase().includes(k)
-      ),
-    }));
+  return positiveArticles;
 }
 
 async function uploadImageAsBlob(
