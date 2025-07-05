@@ -10,22 +10,6 @@ export const POSITIVE_THRESHOLD = 0.75;
 export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
 export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
 
-export const POSITIVE_KEYWORDS = [
-  "win", "victory", "gains", "success", "growth", "solidarity", "organize", "strike",
-  "socialist", "left wing", "union", "responsibility", "mobilize", "charity",
-  "outreach", "resistance", "community", "truth", "celebrate", "local", "save",
-  "future", "knock", "knocks", "healing", "hope", "love", "progressive", "champion",
-  "leader", "empower", "support", "uplift", "transform", "advances", "improves", "breakthrough"
-];
-
-export const NEGATIVE_KEYWORDS = [
-  "death", "deadly", "killed", "kill", "killing", "violence", "attack", "crisis",
-  "disaster", "scandal", "accident", "injured", "tragedy", "fraud", "collapse",
-  "bomb", "shooting", "war", "loser", "awful", "horrible", "terrible", "tragic",
-  "destroy", "raiding", "raid", "gut", "fear", "broken", "destruction",
-  "conflict", "lawsuit", "charges", "indicted", "pleads guilty"
-];
-
 // Keyword groups split by topic for finer control
 export const SOCIAL_JUSTICE_KEYWORDS = [
   "progressive", "progressivism", "socialism", "socialist", "left wing", "left-wing", "leftist",
