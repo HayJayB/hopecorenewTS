@@ -35,14 +35,16 @@ export function adjustedSentiment(text: string, negativeKeywords: string[]): num
  */
 export async function loadListFromFile(filename: string): Promise<string[]> {
   try {
-    console.log(`Loading file: ${filename}`);
+    console.log(`[utils] Loading file: ${filename}`);
     const data = await fs.readFile(filename, "utf-8");
-    return data
+    const lines = data
       .split("\n")
       .map(line => line.trim())
       .filter(line => line.length > 0);
+    console.log(`[utils] Loaded ${lines.length} entries from ${filename}`);
+    return lines;
   } catch (err) {
-    console.warn(`File not found or unreadable: ${filename}`);
+    console.warn(`[utils] File not found or unreadable: ${filename}`);
     return [];
   }
 }
@@ -52,9 +54,10 @@ export async function loadListFromFile(filename: string): Promise<string[]> {
  */
 export async function saveListToFile(list: string[], filename: string): Promise<void> {
   try {
-    console.log(`Saving to file: ${filename}`);
+    console.log(`[utils] Saving ${list.length} entries to file: ${filename}`);
     await fs.writeFile(filename, list.join("\n") + "\n", "utf-8");
+    console.log(`[utils] Successfully saved to ${filename}`);
   } catch (err) {
-    console.error(`Failed to write file: ${filename}`, err);
+    console.error(`[utils] Failed to write file: ${filename}`, err);
   }
 }
