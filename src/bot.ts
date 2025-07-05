@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import Parser from "rss-parser";
-import fetch from "node-fetch"; // npm install node-fetch@2
+import fetch from "node-fetch";
 import {
   loadListFromFile,
   saveListToFile,
@@ -11,7 +11,6 @@ import {
 } from "./utils";
 
 import { BskyAgent } from "@atproto/api";
-import type { AppBskyFeedPost } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -23,13 +22,14 @@ import {
   RECENT_KEYWORDS_FILE,
 } from "./config";
 
-const parser = new Parser();
+const parser = new Parser({
+  headers: { "User-Agent": "Mozilla/5.0 (compatible; HopeCoreBot/1.0)" },
+});
 
 interface FeedEntry {
   title?: string;
   link?: string;
   pubDate?: string;
-  content?: string;
   enclosure?: { url?: string };
   [key: string]: any;
 }
@@ -76,31 +76,30 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
-  const response = await fetch(imageUrl);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
-  }
-  const buffer = await response.buffer();
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
+  const res = await fetch(imageUrl);
+  if (!res.ok) throw new Error(`Failed to fetch image: ${res.statusText}`);
+  const buffer = await res.arrayBuffer();
 
-  // Attempt to detect mime type from extension or fallback to jpeg
+  // Guess mimeType based on extension
   let mimeType = "image/jpeg";
-  if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
-  else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
+  if (imageUrl.endsWith(".png")) mimeType = "image/png";
+  else if (imageUrl.endsWith(".gif")) mimeType = "image/gif";
 
-  const blobRef = await agent.api.uploadBlob(buffer, {
+  // agent.api.uploadBlob expects Uint8Array or Buffer
+  const uint8Buffer = Buffer.from(buffer);
+
+  const blobRef = await agent.api.uploadBlob(uint8Buffer, {
     encoding: mimeType,
     mimeType,
   });
-
-  return blobRef;
+  return blobRef.data.blob;
 }
 
 async function postToBluesky(
   title: string,
   url: string,
-  imageUrl?: string,
-  description?: string
+  imageUrl?: string
 ): Promise<void> {
   const handle = process.env.BLUESKY_HANDLE;
   const appPassword = process.env.BLUESKY_APP_PASSWORD;
@@ -110,34 +109,37 @@ async function postToBluesky(
   }
 
   const agent = new BskyAgent({ service: "https://bsky.social" });
-
   await agent.login({ identifier: handle, password: appPassword });
 
-  let blobRef: string | undefined;
+  let embed;
+
   if (imageUrl) {
     try {
-      blobRef = await uploadImageAsBlob(agent, imageUrl);
-    } catch (err) {
-      console.warn("Image blob upload failed, posting without thumbnail:", err);
+      const thumbBlobRef = await uploadImageAsBlob(agent, imageUrl);
+      embed = {
+        $type: "app.bsky.embed.external",
+        external: {
+          uri: url,
+          title,
+          description: "",
+          thumb: thumbBlobRef,
+        },
+      };
+    } catch (e) {
+      console.warn("Failed to upload thumbnail blob:", e);
     }
   }
 
-  const postInput: any = {
+  const postInput: Parameters<typeof agent.post>[0] = {
     text: title,
     createdAt: new Date().toISOString(),
   };
 
-  if (blobRef) {
-    postInput.embed = {
-      $type: "app.bsky.embed.external",
-      external: {
-        uri: url,
-        title,
-        description: description || "",
-        thumb: blobRef,
-      },
-    };
+  if (embed) {
+    // Attach embed if available
+    (postInput as any).embed = embed;
   } else {
+    // Fallback: append URL in text
     postInput.text += `\n\n${url}`;
   }
 
@@ -174,19 +176,16 @@ async function main() {
       ? chosen.entry.title!.slice(0, 253) + "..."
       : chosen.entry.title!;
 
-  const url = chosen.entry.link!;
-
-  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
-  let imageUrl: string | undefined = undefined;
+  // Attempt to get image from enclosure.url or other common fields
+  let imageUrl: string | undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
-  } else if (chosen.entry.content) {
-    const imgMatch = chosen.entry.content.match(/<img[^>]+src="([^">]+)"/i);
-    if (imgMatch) imageUrl = imgMatch[1];
+  } else if (chosen.entry["media:thumbnail"]?.url) {
+    imageUrl = chosen.entry["media:thumbnail"].url;
   }
 
   try {
-    await postToBluesky(title, url, imageUrl);
+    await postToBluesky(title, chosen.entry.link!, imageUrl);
 
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
