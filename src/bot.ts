@@ -61,8 +61,8 @@ async function fetchRecentPositiveHeadlines(): Promise<
     .map(entry => entry.title!);
 
   const sentiments = [];
-  for (const headline of headlines) {
-    const result = await analyzeSentiment(headline);
+  for (const title of titles) {
+    const result = await analyzeSentiment(title);
     sentiments.push(result);
 }
 
