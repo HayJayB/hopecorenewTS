@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import Parser from "rss-parser";
-import fetch from "node-fetch"; // npm install node-fetch@2
+import fetch from "node-fetch"; // node-fetch v2
 import {
   loadListFromFile,
   saveListToFile,
@@ -23,17 +23,6 @@ import {
   RECENT_KEYWORDS_FILE,
 } from "./config";
 
-// Helper: strip HTML tags & decode entities
-function cleanHtmlToText(html: string): string {
-  let text = html.replace(/<\/?[^>]+(>|$)/g, "");
-  text = text.replace(/&nbsp;/g, " ");
-  text = text.replace(/&amp;/g, "&");
-  text = text.replace(/&quot;/g, '"');
-  text = text.replace(/&lt;/g, "<");
-  text = text.replace(/&gt;/g, ">");
-  return text.trim();
-}
-
 const parser = new Parser();
 
 interface FeedEntry {
@@ -41,9 +30,7 @@ interface FeedEntry {
   link?: string;
   pubDate?: string;
   content?: string;
-  contentSnippet?: string;
   enclosure?: { url?: string };
-  description?: string;
   [key: string]: any;
 }
 
@@ -89,13 +76,14 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
-  const buffer = await response.buffer();
+  const buffer: Buffer = await response.buffer(); // explicit Buffer typing for node-fetch v2
 
+  // Detect mime type by file extension fallback to jpeg
   let mimeType = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
@@ -187,6 +175,7 @@ async function main() {
 
   const url = chosen.entry.link!;
 
+  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
   let imageUrl: string | undefined = undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
@@ -195,21 +184,8 @@ async function main() {
     if (imgMatch) imageUrl = imgMatch[1];
   }
 
-  let description = "";
-  if (chosen.entry.contentSnippet) {
-    description = cleanHtmlToText(chosen.entry.contentSnippet);
-  } else if (chosen.entry.description) {
-    description = cleanHtmlToText(chosen.entry.description);
-  } else if (chosen.entry.content) {
-    description = cleanHtmlToText(chosen.entry.content);
-  }
-
-  if (description.length > 250) {
-    description = description.slice(0, 247) + "...";
-  }
-
   try {
-    await postToBluesky(title, url, imageUrl, description);
+    await postToBluesky(title, url, imageUrl);
 
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
