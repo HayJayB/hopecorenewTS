@@ -1,4 +1,7 @@
 import fs from "fs/promises";
+import Sentiment from "sentiment";
+
+const sentiment = new Sentiment();
 
 /**
  * Normalize title by lowercasing and removing punctuation and whitespace
@@ -14,12 +17,7 @@ export function normalizeTitle(title: string): string {
 /**
  * Adjusted sentiment: calculate polarity and penalize presence of negative keywords
  */
-export function adjustedSentiment(
-  text: string,
-  negativeKeywords: string[]
-): number {
-  const Sentiment = (await import("sentiment")).default;
-  const sentiment = new Sentiment();
+export function adjustedSentiment(text: string, negativeKeywords: string[]): number {
   const result = sentiment.analyze(text);
   let score = result.score;
 
@@ -41,10 +39,10 @@ export async function loadListFromFile(filename: string): Promise<string[]> {
     const data = await fs.readFile(filename, "utf-8");
     return data
       .split("\n")
-      .map((line: string) => line.trim())
-      .filter((line: string) => line.length > 0);
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
   } catch (err) {
-    console.warn(`File not found or could not be read: ${filename}`);
+    console.warn(`File not found or unreadable: ${filename}`);
     return [];
   }
 }
@@ -52,14 +50,10 @@ export async function loadListFromFile(filename: string): Promise<string[]> {
 /**
  * Save list of strings to a file (one per line)
  */
-export async function saveListToFile(
-  list: string[],
-  filename: string
-): Promise<void> {
+export async function saveListToFile(list: string[], filename: string): Promise<void> {
   try {
     console.log(`Saving to file: ${filename}`);
-    const data = list.join("\n") + "\n";
-    await fs.writeFile(filename, data, "utf-8");
+    await fs.writeFile(filename, list.join("\n") + "\n", "utf-8");
   } catch (err) {
     console.error(`Failed to write file: ${filename}`, err);
   }
