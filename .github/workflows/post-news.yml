@@ -1,4 +1,4 @@
-name: Run Bluesky Bot
+name: Run Bluesky Positive News Bot
 
 on:
   workflow_dispatch:
@@ -6,43 +6,43 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    env:
+      PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+      BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
+      BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-          persist-credentials: false  # <-- Important: disable auto credentials
+          persist-credentials: false  # Important for custom git push auth
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: "18"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build
+      - name: Build TypeScript
         run: npm run build
+
+      - name: Debug remote URL
+        run: |
+          echo "https://x-access-token:${PAT_TOKEN}@github.com/HayJayB/hopecorenewTS.git"
+
+      - name: Configure Git to use PAT for pushing
+        run: |
+          git remote set-url origin https://x-access-token:${PAT_TOKEN}@github.com/HayJayB/hopecorenewTS.git
 
       - name: Run bot
         run: node dist/bot.js
 
-      - name: Debug remote URL
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
+      - name: Commit and push updates
         run: |
-          echo "Remote URL for push:"
-          echo "https://x-access-token:${PAT_TOKEN}@github.com/HayJayB/hopecorenewTS.git"
-
-      - name: Configure git for pushing changes
-        env:
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: |
-          git remote set-url origin "https://x-access-token:${PAT_TOKEN}@github.com/HayJayB/hopecorenewTS.git"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Commit and push changes
-        run: |
-          git add posted_links.txt recent_keywords.txt
+          git add posted_links.txt recent_keywords.txt || echo "No changes to add"
           git commit -m "Update posted links and recent keywords [skip ci]" || echo "No changes to commit"
           git push origin main
