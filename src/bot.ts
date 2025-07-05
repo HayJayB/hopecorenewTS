@@ -6,7 +6,7 @@ import {
   loadListFromFile,
   saveListToFile,
   normalizeTitle,
-  adjustedSentiment,
+  analyzeSentiment,
 } from "./utils";
 
 import { BskyAgent } from "@atproto/api";
@@ -30,7 +30,7 @@ interface Article {
 }
 
 /**
- * Fetch recent positive headlines from NewsAPI
+ * Fetch recent positive headlines from NewsAPI with Hugging Face sentiment
  */
 async function fetchRecentPositiveHeadlines(): Promise<
   { entry: Article; keywords: string[] }[]
@@ -55,26 +55,34 @@ async function fetchRecentPositiveHeadlines(): Promise<
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
+  // Extract titles for sentiment
+  const titles = articles
+    .filter(entry => entry.title)
+    .map(entry => entry.title!);
+
+  const sentiments = await analyzeSentiment(titles);
+
   return articles
-    .filter((entry) => {
+    .map((entry, i) => ({ entry, sentiment: sentiments[i] }))
+    .filter(({ entry, sentiment }) => {
       if (!entry.title || !entry.url || !entry.publishedAt) return false;
 
       const pubDate = new Date(entry.publishedAt);
       if (pubDate < cutoffDate) return false;
 
-      const sentimentScore = adjustedSentiment(entry.title, NEGATIVE_KEYWORDS);
-      if (sentimentScore < POSITIVE_THRESHOLD) return false;
+      if (sentiment.label !== "POSITIVE") return false;
+      if (sentiment.score < POSITIVE_THRESHOLD) return false;
 
-      const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
+      const keywordsInTitle = POSITIVE_KEYWORDS.filter(k =>
         entry.title!.toLowerCase().includes(k)
       );
       if (keywordsInTitle.length === 0) return false;
 
       return true;
     })
-    .map((entry) => ({
+    .map(({ entry }) => ({
       entry,
-      keywords: POSITIVE_KEYWORDS.filter((k) =>
+      keywords: POSITIVE_KEYWORDS.filter(k =>
         entry.title!.toLowerCase().includes(k)
       ),
     }));
@@ -174,14 +182,10 @@ async function main() {
       : chosen.entry.title!;
 
   const url = chosen.entry.url!;
-
   const imageUrl = chosen.entry.urlToImage;
 
   try {
     await postToBluesky(title, url, imageUrl, chosen.entry.description);
-    console.log("POSTED_LINKS_FILE path:", POSTED_LINKS_FILE);
-    console.log("RECENT_KEYWORDS_FILE path:", RECENT_KEYWORDS_FILE);
-    console.log("Current working directory:", process.cwd());
 
     postedLinks.push(normalizeTitle(chosen.entry.title!));
     await saveListToFile(postedLinks.slice(-MAX_POSTED_LINKS), POSTED_LINKS_FILE);
