@@ -76,24 +76,33 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer = await response.buffer();
 
-  // Detect encoding from extension or fallback to jpeg
-  let encoding = "image/jpeg";
-  if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
-  else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
+  let mimeType = "image/jpeg";
+  if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
+  else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
 
-  // Pass only encoding option, no mimeType
-  const blobRef = await agent.api.uploadBlob(buffer, {
-    encoding,
+  // Upload the blob and extract the blob ref string properly
+  const uploadResponse = await agent.api.uploadBlob(buffer, {
+    encoding: mimeType, // or contentType: mimeType, check your library version
   });
 
-  return blobRef; // string blob ref
+  // Extract blob ref string — adapt as needed based on your API version
+  const blobRef =
+    (uploadResponse as any).data?.blob ??
+    (uploadResponse as any).blob ??
+    uploadResponse;
+
+  if (typeof blobRef !== "string") {
+    throw new Error("Unexpected uploadBlob response format");
+  }
+
+  return blobRef;
 }
 
 async function postToBluesky(
