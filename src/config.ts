@@ -44,46 +44,53 @@ export const NEGATIVE_KEYWORDS = [
   "conflict", "lawsuit", "charges", "indicted", "pleads guilty"
 ];
 
-export const PROGRESSIVE_KEYWORDS = [
-  "progressive", "progressivism", "socialism", "socialist", "left wing", "left-wing",
-  "leftist", "social justice", "income inequality", "bernie sanders", "aoc",
-  "alexandria ocasio-cortez", "labor rights", "minimum wage", "universal healthcare",
-  "medicare for all", "climate justice", "environmental justice", "black lives matter",
-  "racial justice", "lgbtq rights", "worker rights", "union", "wealth tax",
-  "student debt", "public education", "housing justice", "anti-capitalism", "equity",
-  "green new deal", "fair wages", "collective bargaining", "food justice", "trans rights",
-  "gender equality", "prison reform", "mass incarceration", "living wage", "civil rights",
-  "income redistribution", "corporate accountability", "campaign finance reform",
-  "progressive taxation", "universal basic income", "wealth inequality", "workers' rights",
-  "climate action", "pollution reduction", "fossil fuel divestment", "renewable energy",
-  "transportation", "childcare", "tenant protections", "good cause eviction",
-  "cancel rent", "housing as a human right", "homes guarantee", "public housing",
-  "build public housing", "NYCHA funding", "stop gentrification", "community control",
-  "decarceration", "end mass incarceration", "end cash bail", "universal rent control",
-  "sanctuary cities", "immigrant defense", "abolish ice", "free public college",
-  "cancel student debt", "tuition free college", "medicare expansion",
-  "single payer healthcare", "dignity in retirement", "climate jobs",
-  "green infrastructure", "public broadband", "billionaire tax", "corporate profiteering",
-  "workers bill of rights", "fair housing", "community organizing", "solidarity",
-  "grassroots campaign", "mutual aid", "reproductive rights", "paid family leave",
-  "gig economy", "labor movement", "tenant rights", "affordable housing",
-  "criminal justice reform", "immigrant rights", "racial equity", "housing affordability",
-  "public option", "expanding medicare", "gay", "campaign finance transparency",
-  "corporate greed", "racial disparities", "police accountability", "police abolition",
-  "abolish prisons", "housing for all", "guaranteed jobs", "public transit access",
-  "decarbonization", "net zero emissions", "environmental racism",
-  "youth climate movement", "green jobs", "climate resilience", "paid sick leave",
-  "tax the rich", "universal childcare", "transgender", "community land trust",
-  "rent control", "healthcare access", "racial wealth gap", "gender pay gap",
-  "inclusivity", "public transportation", "economic democracy",
-  "solidarity economy", "just transition", "anti-racism", "racial solidarity",
-  "abolish student debt", "zohran mamdani", "zohran", "mamdani", "dsa",
-  "housing guarantee", "medicare", "unionization", "right to strike",
-  "affordable housing for all", "defund the police", "living wage jobs",
-  "universal pre-k", "workers cooperative", "public ownership",
-  "economic justice", "racial justice organizing", "housing justice movement",
-  "tenant union", "democratic socialism", "social housing", "community wealth building",
-  "public investment", "decarbonize economy", "zero emissions", "green transition"
+export const PROGRESSIVE_KEYWORDS_SOCIAL = [
+  "progressive", "progressivism", "socialism", "socialist", "left wing", "left-wing", "leftist",
+  "social justice", "equity", "fair wages", "income inequality", "income redistribution", "wealth inequality",
+  "wealth tax", "progressive taxation", "anti-capitalism", "corporate accountability", "campaign finance reform",
+  "campaign finance transparency", "corporate greed", "corporate profiteering", "billionaire tax", "tax the rich",
+  "economic democracy", "solidarity economy", "economic justice", "community wealth building",
+  "community land trust", "public ownership", "public investment"
+];
+
+export const PROGRESSIVE_KEYWORDS_LABOR = [
+  "labor rights", "union", "unionization", "right to strike", "collective bargaining", "worker rights",
+  "workers' rights", "workers bill of rights", "labor movement", "gig economy", "living wage", "living wage jobs",
+  "minimum wage", "tenant union", "tenant rights", "tenant protections", "good cause eviction", "cancel rent",
+  "rent control", "universal rent control", "affordable housing", "affordable housing for all", "housing affordability",
+  "housing guarantee", "housing justice", "housing as a human right", "housing for all", "public housing",
+  "build public housing", "community control", "NYCHA funding", "stop gentrification", "social housing",
+  "cancel student debt", "abolish student debt", "student debt", "tuition free college", "free public college",
+  "public education", "universal pre-k", "public broadband", "childcare", "universal childcare", "paid family leave",
+  "paid sick leave", "living wage", "right to strike"
+];
+
+export const PROGRESSIVE_KEYWORDS_ENVIRONMENT = [
+  "climate justice", "environmental justice", "climate action", "green new deal", "green jobs", "climate jobs",
+  "climate resilience", "pollution reduction", "fossil fuel divestment", "renewable energy", "green infrastructure",
+  "decarbonization", "net zero emissions", "decarbonize economy", "zero emissions", "green transition",
+  "environmental racism", "youth climate movement"
+];
+
+export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS = [
+  "black lives matter", "lgbtq rights", "trans rights", "transgender", "gender equality", "gay", "civil rights",
+  "gender pay gap", "inclusivity", "racial disparities", "racial justice", "racial equity", "racial wealth gap",
+  "racial solidarity", "racial justice organizing", "prison reform", "mass incarceration", "end mass incarceration",
+  "decarceration", "abolish prisons", "prisoner rights", "prisoner's rights", "police accountability",
+  "police abolition", "defund the police", "abolish ice", "immigrant rights", "immigrant defense", "sanctuary cities",
+  "reproductive rights"
+];
+
+export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES = [
+  "public transit access", "public transportation", "transportation", "public option", "healthcare access",
+  "universal healthcare", "medicare for all", "medicare expansion", "expanding medicare", "single payer healthcare",
+  "medicare", "dignity in retirement", "free public college", "tuition free college", "public broadband",
+  "childcare", "universal childcare", "paid family leave", "paid sick leave", "public housing", "public education",
+  "universal pre-k"
+];
+
+export const PROGRESSIVE_KEYWORDS_PERSONALITIES = [
+  "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "zohran", "mamdani", "dsa"
 ];
 
 export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
