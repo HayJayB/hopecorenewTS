@@ -2,7 +2,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import Parser from "rss-parser";
-import fetch from "node-fetch"; // npm install node-fetch@2
+import fetch from "node-fetch"; // npm install node-fetch@2 and @types/node-fetch@2
 import {
   loadListFromFile,
   saveListToFile,
@@ -11,7 +11,6 @@ import {
 } from "./utils";
 
 import { BskyAgent } from "@atproto/api";
-import type { AppBskyFeedPost } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -76,24 +75,22 @@ async function fetchRecentPositiveHeadlines(): Promise<
   }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string) {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer = await response.buffer();
 
-  // Attempt to detect mime type from extension or fallback to jpeg
   let mimeType = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) mimeType = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) mimeType = "image/gif";
 
   const blobRef = await agent.api.uploadBlob(buffer, {
     encoding: mimeType,
-    mimeType,
   });
 
-  return blobRef;
+  return blobRef.data.blob;
 }
 
 async function postToBluesky(
@@ -176,7 +173,6 @@ async function main() {
 
   const url = chosen.entry.link!;
 
-  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
   let imageUrl: string | undefined = undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
