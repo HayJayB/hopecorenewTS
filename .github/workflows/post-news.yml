@@ -1,29 +1,25 @@
 name: Post Bluesky News
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository without credentials
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false  # Important: disables default token
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      - name: Clean previous build
-        run: rm -rf dist node_modules
-
       - name: Install dependencies
         run: npm install
-
-      - name: Verify installed @atproto/api version
-        run: npm list @atproto/api
 
       - name: Build TypeScript
         run: npm run build
@@ -34,14 +30,24 @@ jobs:
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
         run: node dist/bot.js
 
-      - name: Configure git for pushing with PAT
+      - name: Install GitHub CLI
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-key C99B11DEB97541F0
+          sudo apt-add-repository https://cli.github.com/packages
+          sudo apt update
+          sudo apt install gh -y
+
+      - name: Authenticate GitHub CLI
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo $GH_TOKEN | gh auth login --with-token
+
+      - name: Commit and push updated files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/HayJayB/hopecorenewTS.git
 
-      - name: Commit and push changes
-        run: |
           git add posted_links.txt recent_keywords.txt
           git commit -m "Update posted links and recent keywords [skip ci]" || echo "No changes to commit"
-          git push origin main
+          git push
