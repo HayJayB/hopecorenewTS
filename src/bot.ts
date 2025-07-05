@@ -10,7 +10,7 @@ import {
   adjustedSentiment,
 } from "./utils";
 
-import { BskyAgent, type BlobRef } from "@atproto/api";
+import { BskyAgent } from "@atproto/api";
 import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
@@ -50,43 +50,44 @@ async function fetchRecentPositiveHeadlines(): Promise<
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-  const filtered = allEntries.filter((entry) => {
-    if (!entry.title || !entry.link || !entry.pubDate) return false;
+  return allEntries
+    .filter((entry) => {
+      if (!entry.title || !entry.link || !entry.pubDate) return false;
 
-    const pubDate = new Date(entry.pubDate);
-    if (pubDate < cutoffDate) return false;
+      const pubDate = new Date(entry.pubDate);
+      if (pubDate < cutoffDate) return false;
 
-    const sentimentScore = adjustedSentiment(entry.title, NEGATIVE_KEYWORDS);
-    if (sentimentScore < POSITIVE_THRESHOLD) return false;
+      const sentimentScore = adjustedSentiment(entry.title, NEGATIVE_KEYWORDS);
+      if (sentimentScore < POSITIVE_THRESHOLD) return false;
 
-    const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
-      entry.title!.toLowerCase().includes(k)
-    );
-    if (keywordsInTitle.length === 0) return false;
+      const keywordsInTitle = POSITIVE_KEYWORDS.filter((k) =>
+        entry.title!.toLowerCase().includes(k)
+      );
+      if (keywordsInTitle.length === 0) return false;
 
-    return true;
-  });
-
-  return filtered.map((entry) => ({
-    entry,
-    keywords: POSITIVE_KEYWORDS.filter((k) =>
-      entry.title!.toLowerCase().includes(k)
-    ),
-  }));
+      return true;
+    })
+    .map((entry) => ({
+      entry,
+      keywords: POSITIVE_KEYWORDS.filter((k) =>
+        entry.title!.toLowerCase().includes(k)
+      ),
+    }));
 }
 
-async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<BlobRef> {
+async function uploadImageAsBlob(agent: BskyAgent, imageUrl: string): Promise<string> {
   const response = await fetch(imageUrl);
   if (!response.ok) {
     throw new Error(`Failed to fetch image for blob upload: ${response.statusText}`);
   }
   const buffer: Buffer = await response.buffer();
 
-  // Use 'encoding' option expected by uploadBlob
+  // Correct option is 'encoding' with mime type string
   let encoding = "image/jpeg";
   if (imageUrl.match(/\.(png)$/i)) encoding = "image/png";
   else if (imageUrl.match(/\.(gif)$/i)) encoding = "image/gif";
 
+  // uploadBlob returns a string blobRef directly
   const blobRef = await agent.api.uploadBlob(buffer, { encoding });
 
   return blobRef;
@@ -109,7 +110,7 @@ async function postToBluesky(
 
   await agent.login({ identifier: handle, password: appPassword });
 
-  let blobRef: BlobRef | undefined;
+  let blobRef: string | undefined;
   if (imageUrl) {
     try {
       blobRef = await uploadImageAsBlob(agent, imageUrl);
@@ -172,8 +173,8 @@ async function main() {
 
   const url = chosen.entry.link!;
 
-  // Try to get image URL from RSS item: either 'enclosure.url' or 'content' with <img> tag
-  let imageUrl: string | undefined = undefined;
+  // Get image URL from RSS enclosure or content img tag
+  let imageUrl: string | undefined;
   if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
     imageUrl = chosen.entry.enclosure.url;
   } else if (chosen.entry.content) {
