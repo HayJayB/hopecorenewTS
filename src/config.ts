@@ -4,7 +4,7 @@ const rootDir = process.cwd();
 
 export const MAX_POSTED_LINKS = 63;
 export const MAX_DAYS_OLD = 14;
-export const POSITIVE_THRESHOLD = 0.85;
+export const POSITIVE_THRESHOLD = 0.75;
 
  //export const RSS_FEEDS = [
   //"https://jacobin.com/feed",
@@ -93,5 +93,9 @@ export const PROGRESSIVE_KEYWORDS_PERSONALITIES = [
   "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "zohran", "mamdani", "dsa"
 ];
 
-export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
-export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
+export const ALL_KEYWORD_GROUPS = [
+  SOCIAL_JUSTICE_KEYWORDS,
+  LABOR_HOUSING_KEYWORDS,
+  ECONOMIC_POLICIES_KEYWORDS,
+  CLIMATE_ENVIRONMENT_KEYWORDS,
+];
