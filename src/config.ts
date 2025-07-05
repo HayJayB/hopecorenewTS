@@ -1,3 +1,5 @@
+import path from "path";
+
 export const MAX_POSTED_LINKS = 50;
 export const MAX_DAYS_OLD = 14;
 export const POSITIVE_THRESHOLD = 0.1;
@@ -39,5 +41,7 @@ export const NEGATIVE_KEYWORDS = [
   "destroy", "raiding", "raid", "gut", "fear", "broken", "destruction",
 ];
 
-export const POSTED_LINKS_FILE = "data/posted_links.txt";
-export const RECENT_KEYWORDS_FILE = "data/recent_keywords.txt";
+// Make absolutely sure these paths are correct
+// They will resolve to: your_project_root/data/posted_links.txt
+export const POSTED_LINKS_FILE = path.resolve("data", "posted_links.txt");
+export const RECENT_KEYWORDS_FILE = path.resolve("data", "recent_keywords.txt");
