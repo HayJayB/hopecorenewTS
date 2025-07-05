@@ -23,7 +23,24 @@ import {
   RECENT_KEYWORDS_FILE,
 } from "./config";
 
-const parser = new Parser();
+// 👇 Custom fetch with browser-like User-Agent
+const customFetch = async (url: string, options = {}) => {
+  return fetch(url, {
+    ...options,
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Accept":
+        "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+      ...(options as any).headers,
+    },
+  });
+};
+
+// 👇 Use customFetch so feeds don't return 403
+const parser = new Parser({
+  customFetch,
+});
 
 interface FeedEntry {
   title?: string;
