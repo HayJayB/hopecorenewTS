@@ -1,7 +1,6 @@
 import * as dotenv from "dotenv";
 dotenv.config();
 
-import Parser from "rss-parser";
 import fetch from "node-fetch";
 import {
   loadListFromFile,
@@ -18,61 +17,49 @@ import {
   POSITIVE_THRESHOLD,
   POSITIVE_KEYWORDS,
   NEGATIVE_KEYWORDS,
-  RSS_FEEDS,
   POSTED_LINKS_FILE,
   RECENT_KEYWORDS_FILE,
 } from "./config";
 
-// 👇 Custom fetch with browser-like User-Agent
-const customFetch = async (url: string, options = {}) => {
-  return fetch(url, {
-    ...options,
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept":
-        "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
-      ...(options as any).headers,
-    },
-  });
-};
-
-// 👇 Use customFetch so feeds don't return 403
-const parser = new Parser({
-  customFetch
-} as any);
-
-interface FeedEntry {
+interface Article {
   title?: string;
-  link?: string;
-  pubDate?: string;
-  content?: string;
-  enclosure?: { url?: string };
-  [key: string]: any;
+  url?: string;
+  publishedAt?: string;
+  description?: string;
+  urlToImage?: string;
 }
 
+/**
+ * Fetch recent positive headlines from NewsAPI
+ */
 async function fetchRecentPositiveHeadlines(): Promise<
-  { entry: FeedEntry; keywords: string[] }[]
+  { entry: Article; keywords: string[] }[]
 > {
-  const allEntries: FeedEntry[] = [];
-
-  for (const feedUrl of RSS_FEEDS) {
-    try {
-      const feed = await parser.parseURL(feedUrl);
-      allEntries.push(...feed.items);
-    } catch (err) {
-      console.error(`Failed to fetch RSS feed ${feedUrl}:`, err);
-    }
+  const apiKey = process.env.NEWSAPI_KEY;
+  if (!apiKey) {
+    throw new Error("NEWSAPI_KEY is not set in .env");
   }
+
+  const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
+    POSITIVE_KEYWORDS.join(" OR ")
+  )}&language=en&sortBy=publishedAt&pageSize=50&apiKey=${apiKey}`;
+
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`NewsAPI request failed: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const articles: Article[] = data.articles;
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-  return allEntries
+  return articles
     .filter((entry) => {
-      if (!entry.title || !entry.link || !entry.pubDate) return false;
+      if (!entry.title || !entry.url || !entry.publishedAt) return false;
 
-      const pubDate = new Date(entry.pubDate);
+      const pubDate = new Date(entry.publishedAt);
       if (pubDate < cutoffDate) return false;
 
       const sentimentScore = adjustedSentiment(entry.title, NEGATIVE_KEYWORDS);
@@ -186,18 +173,12 @@ async function main() {
       ? chosen.entry.title!.slice(0, 253) + "..."
       : chosen.entry.title!;
 
-  const url = chosen.entry.link!;
+  const url = chosen.entry.url!;
 
-  let imageUrl: string | undefined;
-  if (chosen.entry.enclosure && chosen.entry.enclosure.url) {
-    imageUrl = chosen.entry.enclosure.url;
-  } else if (chosen.entry.content) {
-    const imgMatch = chosen.entry.content.match(/<img[^>]+src="([^">]+)"/i);
-    if (imgMatch) imageUrl = imgMatch[1];
-  }
+  const imageUrl = chosen.entry.urlToImage;
 
   try {
-    await postToBluesky(title, url, imageUrl);
+    await postToBluesky(title, url, imageUrl, chosen.entry.description);
     console.log("POSTED_LINKS_FILE path:", POSTED_LINKS_FILE);
     console.log("RECENT_KEYWORDS_FILE path:", RECENT_KEYWORDS_FILE);
     console.log("Current working directory:", process.cwd());
