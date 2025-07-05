@@ -1,3 +1,5 @@
+// bot.ts
+
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -16,7 +18,7 @@ import {
   MAX_DAYS_OLD,
   MAX_POSTED_LINKS,
   POSITIVE_THRESHOLD,
-  ALL_KEYWORD_GROUPS, // Make sure you export this array of keyword groups from config
+  ALL_KEYWORD_GROUPS,
   POSTED_LINKS_FILE,
   RECENT_KEYWORDS_FILE,
 } from "./config";
@@ -29,23 +31,17 @@ interface Article {
   urlToImage?: string;
 }
 
-/**
- * Fetch recent headlines from NewsAPI for multiple keyword groups with sentiment filtering
- */
 async function fetchRecentProgressiveHeadlines(): Promise<
   { entry: Article; keywords: string[] }[]
 > {
   const apiKey = process.env.NEWSAPI_KEY;
-  if (!apiKey) {
-    throw new Error("NEWSAPI_KEY is not set in .env");
-  }
+  if (!apiKey) throw new Error("NEWSAPI_KEY is not set in .env");
 
   let combinedArticles: { entry: Article; keywords: string[] }[] = [];
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - MAX_DAYS_OLD);
 
-  // Loop through each keyword group and fetch articles
   for (const keywordGroup of ALL_KEYWORD_GROUPS) {
     const query = keywordGroup.join(" OR ");
     const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(
@@ -58,13 +54,12 @@ async function fetchRecentProgressiveHeadlines(): Promise<
         console.warn(
           `NewsAPI request failed for keywords: ${query} - ${response.statusText}`
         );
-        continue; // Skip this group and continue with next
+        continue;
       }
 
       const data = await response.json();
       const articles: Article[] = data.articles;
 
-      // Filter articles by date and required fields
       const filtered = articles
         .filter(
           (a) =>
@@ -89,18 +84,16 @@ async function fetchRecentProgressiveHeadlines(): Promise<
   const uniqueArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
   for (const item of combinedArticles) {
     const normTitle = normalizeTitle(item.entry.title!);
-    if (!uniqueArticlesMap.has(normTitle)) {
-      uniqueArticlesMap.set(normTitle, item);
-    }
+    if (!uniqueArticlesMap.has(normTitle)) uniqueArticlesMap.set(normTitle, item);
   }
   const uniqueArticles = Array.from(uniqueArticlesMap.values());
 
-  // Perform sentiment analysis concurrently
+  // Sentiment analysis concurrently
   const sentiments = await Promise.all(
     uniqueArticles.map(({ entry }) => analyzeSentiment(entry.title!))
   );
 
-  // Filter by sentiment and threshold
+  // Filter positive sentiment by threshold
   const positiveArticles = uniqueArticles
     .map(({ entry, keywords }, i) => ({ entry, keywords, sentiment: sentiments[i] }))
     .filter(
