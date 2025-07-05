@@ -1,7 +1,12 @@
 import fs from "fs/promises";
+import fetch from "node-fetch";
 import Sentiment from "sentiment";
 
 const sentiment = new Sentiment();
+
+const HF_API_URL =
+  "https://api-inference.huggingface.co/models/distilbert-base-uncased-finetuned-sst-2-english";
+const HF_API_TOKEN = process.env.HF_API_TOKEN;
 
 /**
  * Normalize title by lowercasing and removing punctuation and whitespace
@@ -15,7 +20,7 @@ export function normalizeTitle(title: string): string {
 }
 
 /**
- * Adjusted sentiment: calculate polarity and penalize presence of negative keywords
+ * Adjusted sentiment: local heuristic method (you may keep this as fallback)
  */
 export function adjustedSentiment(text: string, negativeKeywords: string[]): number {
   const result = sentiment.analyze(text);
@@ -28,6 +33,37 @@ export function adjustedSentiment(text: string, negativeKeywords: string[]): num
   }
 
   return score;
+}
+
+/**
+ * Analyze sentiment for a batch of texts using Hugging Face Transformers
+ */
+export async function analyzeSentiment(texts: string[]): Promise<
+  { label: string; score: number }[]
+> {
+  if (!HF_API_TOKEN) {
+    throw new Error("HF_API_TOKEN is not set in .env");
+  }
+
+  const response = await fetch(HF_API_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${HF_API_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ inputs: texts }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Hugging Face API error: ${response.statusText}`);
+  }
+
+  const json = await response.json();
+
+  return json.map((result: any) => ({
+    label: result[0].label,
+    score: result[0].score,
+  }));
 }
 
 /**
