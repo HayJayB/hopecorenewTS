@@ -58,12 +58,23 @@ export async function analyzeSentiment(texts: string[]): Promise<
   }
 
   const json = await response.json();
+  console.log("Hugging Face raw response:", JSON.stringify(json, null, 2));
 
-  // If single text was passed, wrap in array for consistency
+  // Handle error responses
+  if (json.error) {
+    throw new Error(`Hugging Face API returned error: ${json.error}`);
+  }
+
+  // Determine format:
+  // Batch shape: Array of Arrays
+  // Single shape: Array of objects
   const resultsArray = Array.isArray(json[0]) ? json : [json];
 
   return resultsArray.map((result: any) => {
-    // Find the label with the highest score
+    if (!Array.isArray(result) || result.length === 0) {
+      throw new Error(`Unexpected Hugging Face result format: ${JSON.stringify(result)}`);
+    }
+
     const best = result.reduce(
       (max: any, curr: any) => (curr.score > max.score ? curr : max),
       result[0]
