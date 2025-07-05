@@ -10,11 +10,9 @@
   },
   "dependencies": {
     "@atproto/api": "^0.15.23",
-    "rss-parser": "^3.12.0",
     "sentiment": "^5.0.2",
     "dotenv": "^16.0.3",
     "fs-extra": "^11.1.1",
-    "axios": "^1.4.0",
     "node-fetch": "^2.6.7"
   },
   "devDependencies": {
