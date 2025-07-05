@@ -1,7 +1,7 @@
 name: Post Bluesky News
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
 
 jobs:
   run-bot:
@@ -30,17 +30,23 @@ jobs:
       - name: Build TypeScript
         run: npm run build
 
-      - name: Debug working directory and files
-        run: |
-          echo "Working directory:"
-          pwd
-          echo "Files in root:"
-          ls -la
-          echo "Checking posted_links.txt and recent_keywords.txt presence:"
-          ls -la posted_links.txt recent_keywords.txt || echo "Files not found"
-
       - name: Run bot
         env:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
         run: node dist/bot.js
+
+      - name: Configure Git for commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Commit updated files if any
+        run: |
+          git add posted_links.txt recent_keywords.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Update posted links and recent keywords [skip ci]"
+            git push origin HEAD:${{ github.ref }}
+          else
+            echo "No changes to commit"
+          fi
