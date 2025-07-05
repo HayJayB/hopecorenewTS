@@ -1,4 +1,4 @@
-name: Run Bot
+name: Run Bluesky Positive News Bot
 
 on:
   workflow_dispatch:
@@ -14,7 +14,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "18"
+          node-version: 18
+
+      - name: Clean workspace
+        run: rm -rf dist node_modules
 
       - name: Install dependencies
         run: npm install
@@ -23,8 +26,23 @@ jobs:
         run: npm run build
 
       - name: Run bot script
+        run: node dist/bot.js
         env:
           BLUESKY_HANDLE: ${{ secrets.BLUESKY_HANDLE }}
           BLUESKY_APP_PASSWORD: ${{ secrets.BLUESKY_APP_PASSWORD }}
-          PAT_TOKEN: ${{ secrets.PAT_TOKEN }}
-        run: node dist/bot.js
+
+      - name: Configure Git for Push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote set-url origin https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/${{ github.repository }}.git
+
+      - name: Commit updated txt files
+        run: |
+          git add posted_links.txt recent_keywords.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "Update posted links and recent keywords [skip ci]"
+            git push origin HEAD:${{ github.ref }}
+          else
+            echo "No changes to commit"
+          fi
