@@ -48,6 +48,8 @@ async function fetchRecentProgressiveHeadlines(): Promise<
       query
     )}&language=en&sortBy=publishedAt&pageSize=100&apiKey=${apiKey}`;
 
+    console.log(`Fetching articles for keywords: [${query}]`);
+
     try {
       const response = await fetch(url);
       if (!response.ok) {
@@ -59,6 +61,7 @@ async function fetchRecentProgressiveHeadlines(): Promise<
 
       const data = await response.json();
       const articles: Article[] = data.articles;
+      console.log(`Fetched ${articles.length} raw articles.`);
 
       const filtered = articles
         .filter(
@@ -76,12 +79,16 @@ async function fetchRecentProgressiveHeadlines(): Promise<
         }))
         .filter(({ keywords }) => keywords.length > 0);
 
+      console.log(`After filtering: ${filtered.length} articles.`);
+
       combinedArticles.push(...filtered);
     } catch (error) {
       console.warn(`Error fetching articles for keywords: ${query}`, error);
       continue;
     }
   }
+
+  console.log(`Total combined articles: ${combinedArticles.length}`);
 
   const uniqueArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
   for (const item of combinedArticles) {
@@ -91,6 +98,7 @@ async function fetchRecentProgressiveHeadlines(): Promise<
     }
   }
   const uniqueArticles = Array.from(uniqueArticlesMap.values());
+  console.log(`After deduplication: ${uniqueArticles.length} articles.`);
 
   const sentiments = await Promise.all(
     uniqueArticles.map(({ entry }) => analyzeSentiment(entry.title!))
@@ -103,6 +111,8 @@ async function fetchRecentProgressiveHeadlines(): Promise<
         (sentiment.label === "POSITIVE" || sentiment.label === "LABEL_1") &&
         sentiment.score >= POSITIVE_THRESHOLD
     );
+
+  console.log(`After sentiment filtering: ${positiveArticles.length} articles.`);
 
   return positiveArticles;
 }
@@ -193,6 +203,8 @@ async function main() {
 
     return true;
   });
+
+  console.log(`After exclusion filters: ${candidates.length} articles.`);
 
   if (candidates.length === 0) {
     console.log("No new progressive articles found to post.");
