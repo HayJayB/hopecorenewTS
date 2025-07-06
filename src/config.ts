@@ -96,7 +96,7 @@ export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES_2 = [
 ];
 
 export const PROGRESSIVE_KEYWORDS_PERSONALITIES = [
-  "bernie sanders", "aoc", "alexandria ocasio-cortez", "zohran mamdani", "elizabeth warren",
+  "bernie sanders", "jasmine crockett", "alexandria ocasio-cortez", "zohran mamdani", "elizabeth warren",
   "rashida tlaib", "ilhan omar", "ayanna pressley", "cori bush", "pramila jayapal",
   "jamal bowman", "ro khanna", "maxine waters", "stacey abrams", "kristen gillibrand"
 ];
