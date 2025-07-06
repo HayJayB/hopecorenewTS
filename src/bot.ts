@@ -74,7 +74,11 @@ async function fetchRecentProgressiveHeadlines(): Promise<
         .map((a) => ({
           entry: a,
           keywords: keywordGroup.filter((k) =>
-            a.title!.toLowerCase().includes(k)
+            (
+              (a.title || "") +
+              " " +
+              (a.description || "")
+            ).toLowerCase().includes(k)
           ),
         }))
         .filter(({ keywords }) => keywords.length > 0);
