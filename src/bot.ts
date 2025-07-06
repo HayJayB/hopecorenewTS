@@ -1,5 +1,3 @@
-// bot.ts
-
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -35,7 +33,9 @@ async function fetchRecentProgressiveHeadlines(): Promise<
   { entry: Article; keywords: string[] }[]
 > {
   const apiKey = process.env.NEWSAPI_KEY;
-  if (!apiKey) throw new Error("NEWSAPI_KEY is not set in .env");
+  if (!apiKey) {
+    throw new Error("NEWSAPI_KEY is not set in .env");
+  }
 
   let combinedArticles: { entry: Article; keywords: string[] }[] = [];
 
@@ -70,8 +70,11 @@ async function fetchRecentProgressiveHeadlines(): Promise<
         )
         .map((a) => ({
           entry: a,
-          keywords: keywordGroup,
-        }));
+          keywords: keywordGroup.filter((k) =>
+            a.title!.toLowerCase().includes(k)
+          ),
+        }))
+        .filter(({ keywords }) => keywords.length > 0);
 
       combinedArticles.push(...filtered);
     } catch (error) {
@@ -80,20 +83,19 @@ async function fetchRecentProgressiveHeadlines(): Promise<
     }
   }
 
-  // Deduplicate by normalized title
   const uniqueArticlesMap = new Map<string, { entry: Article; keywords: string[] }>();
   for (const item of combinedArticles) {
     const normTitle = normalizeTitle(item.entry.title!);
-    if (!uniqueArticlesMap.has(normTitle)) uniqueArticlesMap.set(normTitle, item);
+    if (!uniqueArticlesMap.has(normTitle)) {
+      uniqueArticlesMap.set(normTitle, item);
+    }
   }
   const uniqueArticles = Array.from(uniqueArticlesMap.values());
 
-  // Sentiment analysis concurrently
   const sentiments = await Promise.all(
     uniqueArticles.map(({ entry }) => analyzeSentiment(entry.title!))
   );
 
-  // Filter positive sentiment by threshold
   const positiveArticles = uniqueArticles
     .map(({ entry, keywords }, i) => ({ entry, keywords, sentiment: sentiments[i] }))
     .filter(
