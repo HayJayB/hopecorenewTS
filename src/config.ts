@@ -14,30 +14,30 @@ export const PROGRESSIVE_KEYWORDS_SOCIAL_1 = [
   "left-wing", "leftist", "social justice", "inclusion", "fair wages",
   "income", "redistribution", "inequality", "wealth tax", "progressive taxation", 
   "anti-capitalism", "accountability", "reform", "campaign", 
-  "corporate", "greed", "equality", "opportunity"
+  "corporate", "greed", "equality", "oversight", "government"
 ];
 
 export const PROGRESSIVE_KEYWORDS_SOCIAL_2 = [
   "corporate profiteering", "billionaire", "economic democracy",
-  "solidarity", "economy", "economic justice", "community", "wealth",
-  "public", "fair treatment", "accessibility", "social justice", "progressive taxation",
+  "solidarity", "working class", "economic justice", "community", "education",
+  "public sector", "fair treatment", "accessibility", "social justice", "progressive taxation",
   "wealth tax", "anti-capitalism", "corporate accountability", "campaign finance reform",
-  "corporate greed", "solidarity", "economy", "democracy"
+  "corporate greed", "solidarity", "middle class", "democracy"
 ];
 
 export const PROGRESSIVE_KEYWORDS_LABOR_1 = [
   "labor rights", "unionization", "right to strike", "collective bargaining",
-  "worker", "bill of rights", "labor movement", "economy", "living wage", 
+  "worker", "bill of rights", "labor movement", "middle class", "living wage", 
   "living wage jobs", "minimum wage", "tenant",  "union", "rights", 
-  "protections", "rent", "rent control", "universal", "fair treatment", "equal opportunity", "accessibility"
+  "protections", "rent", "rent control", "universal programs", "fair treatment", "equal opportunity", "accessibility"
 ];
 
 export const PROGRESSIVE_KEYWORDS_LABOR_2 = [
   "affordable", "housing", "guarantee", "human right", "DemSoc",
-  "public housing", "build", "public", "community control", "funding",
+  "public housing", "working class", "public", "community control", "funding",
   "gentrification", "social housing", "student loan", "abolish",
   "student debt", "tuition", "free college", "forgiveness", "public education",
-  "universal", "pre-k", "fair treatment", "inclusion", "equal opportunity"
+  "universal healthcare", "pre-k", "fair treatment", "inclusion", "equal opportunity"
 ];
 
 export const PROGRESSIVE_KEYWORDS_LABOR_3 = [
@@ -67,22 +67,22 @@ export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS_1 = [
 export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS_2 = [
   "prisoner rights", "prisoner's rights", "police accountability", "police abolition",
   "defund the police", "abolish ice", "immigrant rights", "immigrant defense",
-  "sanctuary cities", "reproductive rights", "fair treatment", "accessibility",
+  "sanctuary cities", "pro choice", "fair treatment", "accessibility",
   "racial justice", "mass incarceration", "prison reform", "civil rights",
   "lgbtq rights", "trans rights", "gender equality", "black lives matter",
   "racial equity", "inclusion"
 ];
 
 export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES_1 = [
-  "public transit", "access", "public", "transportation", "public option",
-  "healthcare", "universal", "medicare", "expansion", "expand", 
+  "public transit", "service access", "public sector", "transportation", "public option",
+  "healthcare", "labor movement", "medicare", "expansion", "expand", "bodily autonomy",
   "single payer", "medicare", "medicaid", "dignity", "retirement",
-  "tuition", "free college", "indigenous", "childcare",
+  "tuition", "free college", "indigenous", "childcare", "abortion rights",
   "universal childcare", "public housing", "fair treatment"
 ];
 
 export const PROGRESSIVE_KEYWORDS_PUBLIC_SERVICES_2 = [
-  "public education", "universal", "pre-k", "inclusion", "equal opportunity", "accessibility",
+  "public education", "ethics", "pre-k", "inclusion", "equal opportunity", "accessibility",
   "healthcare access", "free college", "paid family leave", "low cost",
   "childcare", "public broadband", "medicaid", "medicare", "public housing",
   "free public college", "single payer", "healthcare", "public transit access", 
