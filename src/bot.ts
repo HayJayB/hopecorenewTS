@@ -90,6 +90,14 @@ async function fetchRecentProgressiveHeadlines(): Promise<
 
       console.log(`After filtering: ${filtered.length} articles.`);
 
+      if (filtered.length > 0) {
+        filtered.forEach(({ entry, keywords }) => {
+          console.log(
+            `Matched article: "${entry.title}"\n  -> Keywords: [${keywords.join(", ")}]\n`
+          );
+        });
+      }
+
       combinedArticles.push(...filtered);
     } catch (error) {
       console.warn(`Error fetching articles for keywords: ${query}`, error);
