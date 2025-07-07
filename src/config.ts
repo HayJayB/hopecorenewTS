@@ -34,7 +34,7 @@ export const PROGRESSIVE_KEYWORDS_LABOR_1 = [
 
 export const PROGRESSIVE_KEYWORDS_LABOR_2 = [
   "affordable", "housing", "guarantee", "human right", "DemSoc",
-  "public housing", "build" "public", "community control", "funding",
+  "public housing", "build", "public", "community control", "funding",
   "gentrification", "social housing", "student loan", "abolish",
   "student debt", "tuition", "free college", "forgiveness", "public education",
   "universal", "pre-k", "fair treatment", "inclusion", "equal opportunity"
@@ -53,7 +53,7 @@ export const PROGRESSIVE_KEYWORDS_ENVIRONMENT_1 = [
   "green jobs", "climate jobs", "climate resilience", "pollution reduction",
   "divestment", "renewable energy", "infrastructure", "decarbonization",
   "net zero emissions", "decarbonize economy", "zero emissions", "transition",
-  "environmental racism", "youth climate movement", "inclusion", "equality" "racism"
+  "environmental racism", "youth climate movement", "inclusion", "equality", "racism"
 ];
 
 export const PROGRESSIVE_KEYWORDS_CIVIL_RIGHTS_1 = [
