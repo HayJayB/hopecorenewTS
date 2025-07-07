@@ -223,6 +223,14 @@ async function main() {
 
   console.log(`After exclusion filters: ${candidates.length} articles.`);
 
+  // Log candidates after exclusion filtering
+  candidates.forEach(({ entry, keywords }, index) => {
+    console.log(`\n[Candidate ${index + 1}]`);
+    console.log(`Title: ${entry.title}`);
+    console.log(`URL: ${entry.url}`);
+    console.log(`Keywords: ${keywords.join(", ")}`);
+  });
+
   if (candidates.length === 0) {
     console.log("No new progressive articles found to post.");
     return;
