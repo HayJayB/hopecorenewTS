@@ -1,4 +1,4 @@
-zohran mamdani
 worker
 union
 climate
+public
