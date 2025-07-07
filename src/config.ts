@@ -34,7 +34,7 @@ export const PROGRESSIVE_KEYWORDS_LABOR_1 = [
 
 export const PROGRESSIVE_KEYWORDS_LABOR_2 = [
   "affordable", "housing", "guarantee", "human right", "DemSoc",
-  "public housing", "working class", "public", "community control", "funding",
+  "public housing", "working class", "build back better", "community control", "funding",
   "gentrification", "social housing", "student loan", "abolish",
   "student debt", "tuition", "free college", "forgiveness", "public education",
   "universal healthcare", "pre-k", "fair treatment", "inclusion", "equal opportunity"
