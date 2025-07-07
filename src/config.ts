@@ -4,7 +4,7 @@ const rootDir = process.cwd();
 
 export const MAX_POSTED_LINKS = 63;
 export const MAX_DAYS_OLD = 21;
-export const POSITIVE_THRESHOLD = 0.75;
+export const POSITIVE_THRESHOLD = 0.80;
 
 export const POSTED_LINKS_FILE = path.join(rootDir, "posted_links.txt");
 export const RECENT_KEYWORDS_FILE = path.join(rootDir, "recent_keywords.txt");
@@ -14,7 +14,7 @@ export const PROGRESSIVE_KEYWORDS_SOCIAL_1 = [
   "left-wing", "leftist", "social justice", "inclusion", "fair wages",
   "income", "redistribution", "inequality", "wealth tax", "progressive taxation", 
   "anti-capitalism", "accountability", "reform", "campaign", 
-  "transparency", "corporate", "greed", "equality", "opportunity"
+  "corporate", "greed", "equality", "opportunity"
 ];
 
 export const PROGRESSIVE_KEYWORDS_SOCIAL_2 = [
