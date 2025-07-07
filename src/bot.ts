@@ -26,6 +26,7 @@ interface Article {
   url?: string;
   publishedAt?: string;
   description?: string;
+  content?: string;
   urlToImage?: string;
 }
 
@@ -71,15 +72,20 @@ async function fetchRecentProgressiveHeadlines(): Promise<
             a.publishedAt &&
             new Date(a.publishedAt) >= cutoffDate
         )
-        .map((a) => ({
-          entry: a,
-          keywords: keywordGroup.filter((k) => {
-            const text = ((a.title || "") + " " + (a.description || "")).toLowerCase();
-            return k
-              .split(" ")
-              .some((word) => text.includes(word));
-          }),
-        }))
+        .map((a) => {
+          const text = (
+            (a.title || "") +
+            " " +
+            (a.description || "") +
+            " " +
+            (a.content || "")
+          ).toLowerCase();
+
+          return {
+            entry: a,
+            keywords: keywordGroup.filter((k) => text.includes(k.toLowerCase())),
+          };
+        })
         .filter(({ keywords }) => keywords.length > 0);
 
       console.log(`After filtering: ${filtered.length} articles.`);
