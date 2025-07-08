@@ -1,4 +1,4 @@
-public
 healthcare
 campaign
 worker
+climate
