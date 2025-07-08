@@ -1,4 +1,4 @@
-environment
-action
-healthcare
 zohran mamdani
+climate
+infrastructure
+transition
