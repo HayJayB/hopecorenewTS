@@ -14,7 +14,7 @@ export const PROGRESSIVE_KEYWORDS_SOCIAL_1 = [
   "left-wing", "leftist", "social justice", "inclusion", "fair wages",
   "income", "redistribution", "inequality", "wealth tax", "progressive taxation", 
   "anti-capitalism", "accountability", "reform", "campaign", 
-  "corporate", "greed", "equality", "oversight", "government"
+  "corporate", "equality", "oversight", "government"
 ];
 
 export const PROGRESSIVE_KEYWORDS_SOCIAL_2 = [
