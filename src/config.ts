@@ -13,7 +13,7 @@ export const PROGRESSIVE_KEYWORDS_SOCIAL_1 = [
   "progressive", "progressivism", "socialism", "socialist", "left wing",
   "left-wing", "leftist", "social justice", "inclusion", "fair wages",
   "income", "redistribution", "inequality", "wealth tax", "progressive taxation", 
-  "anti-capitalism", "accountability", "reform", "campaign", 
+  "anti-capitalism", "accountability", "reform", "campaign finance", 
   "corporate", "equality", "oversight", "government"
 ];
 
@@ -34,7 +34,7 @@ export const PROGRESSIVE_KEYWORDS_LABOR_1 = [
 
 export const PROGRESSIVE_KEYWORDS_LABOR_2 = [
   "affordable", "housing", "guarantee", "human right", "DemSoc",
-  "public housing", "working class", "build back better", "community control", "funding",
+  "public housing", "working class", "build back better", "community control", "campaign fund",
   "gentrification", "social housing", "student loan", "abolish",
   "student debt", "tuition", "free college", "forgiveness", "public education",
   "universal healthcare", "pre-k", "fair treatment", "inclusion", "equal opportunity"
