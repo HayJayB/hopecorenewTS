@@ -1,4 +1,4 @@
-worker
 union
 rent
 climate
+public housing
