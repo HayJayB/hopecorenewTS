@@ -1,4 +1,4 @@
-healthcare
 expand
 worker
 union
+equality
