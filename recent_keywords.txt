@@ -1,4 +1,4 @@
-equality
 climate
 infrastructure
 environment
+inclusion
