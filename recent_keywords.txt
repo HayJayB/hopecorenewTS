@@ -1,4 +1,4 @@
-government
 worker
 healthcare
 expansion
+expand
