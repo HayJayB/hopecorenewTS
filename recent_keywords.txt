@@ -1,4 +1,4 @@
-minimum wage
 rent
 action
 environment
+climate
