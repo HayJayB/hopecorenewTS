@@ -1,4 +1,4 @@
-worker
-progressive
 government
 rent
+climate
+environment
