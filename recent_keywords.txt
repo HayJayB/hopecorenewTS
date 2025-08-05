@@ -1,4 +1,4 @@
-government
-rent
 climate
 environment
+worker
+minimum wage
