@@ -1,4 +1,4 @@
-climate
 environment
 worker
 minimum wage
+community
