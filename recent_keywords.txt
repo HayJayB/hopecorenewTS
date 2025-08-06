@@ -1,4 +1,4 @@
-climate
 healthcare
 government
 minimum wage
+worker
