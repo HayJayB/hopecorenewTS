@@ -1,4 +1,4 @@
-worker
 union
 protections
 equality
+public housing
