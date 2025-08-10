@@ -1,4 +1,4 @@
-union
-protections
 equality
 public housing
+worker
+living wage
