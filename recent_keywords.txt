@@ -1,4 +1,4 @@
-unionization
 worker
 union
 protections
+equality
