@@ -1,4 +1,4 @@
-worker
 income
 housing
 rent
+climate
