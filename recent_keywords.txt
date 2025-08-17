@@ -1,4 +1,4 @@
-income
 housing
 rent
 climate
+expansion
