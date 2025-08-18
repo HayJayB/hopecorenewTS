@@ -1,4 +1,4 @@
-union
 infrastructure
 wealth tax
 government
+income
