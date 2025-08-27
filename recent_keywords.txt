@@ -1,4 +1,4 @@
-education
-rent
 government
 guarantee
+climate
+environment
