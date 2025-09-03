@@ -1,4 +1,4 @@
-environment
-transition
 renewable energy
 expand
+worker
+union
