@@ -1,4 +1,4 @@
-environment
 worker
 infrastructure
 community
+rent
