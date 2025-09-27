@@ -1,4 +1,4 @@
-worker
 infrastructure
 community
 rent
+childcare
